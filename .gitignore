@@ -1,0 +1,7 @@
+.env
+alembic.ini
+test.py
+**/__pycache__
+db/embeddings/*
+**/credentials.json
+**/token.json

@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "gptapi"
+version = "0.1.0"
+description = ""
+authors = ["ceo-s "]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+chromadb = "^0.4.4"
+openai = "^0.27.8"
+aiohttp = "^3.8.5"
+pydrive = "^1.3.1"
+google-auth-oauthlib = "^1.0.0"
+sqlalchemy = "^2.0.19"
+asyncpg = "^0.28.0"
+alembic = "^1.11.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
