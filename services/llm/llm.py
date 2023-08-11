@@ -21,7 +21,7 @@ def chat_completion(history: list[dict[str, str]], prompt: str, temperature: int
         messages=messages,
         temperature=temperature,
     )
-    print(response.get("choices")[0].message["content"].strip())
+
     return response.get("choices")[0].message["content"].strip()
 
 

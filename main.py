@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 
-from drive import GDrive
+from services.drive import GDrive
 from static import register_staticfiles
 from routes import register_routers
 

@@ -17,7 +17,7 @@ class User(M.ClassNamed, BASE):
         back_populates="user",
         cascade="all, delete",
         uselist=False,
-        lazy="joined",
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:
@@ -30,13 +30,15 @@ class UserSettings(M.AutoIncrement, BASE):
     model_temperature: Mapped[float] = mapped_column()
     prompt: Mapped[str] = mapped_column()
     history = mapped_column(JSONB)
+    history_size: Mapped[int] = mapped_column()
 
     user_fk: Mapped[int] = mapped_column(
         ForeignKey("user.id", ondelete="CASCADE"))
     user: Mapped["User"] = relationship(
         back_populates="settings",
-        cascade="all, delete", uselist=False,
-        lazy="joined",
+        cascade="all, delete",
+        uselist=False,
+        lazy="selectin",
     )
 
     def __repr__(self) -> str:

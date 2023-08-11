@@ -1,0 +1,15 @@
+#stats {
+    margin-top: 1.4em;
+    font-size: 2em;
+}
+#stats + div {
+    font-size: 1.2em;
+}
+
+.buttons {
+    margin-top: 2em;
+}
+.base-btn:last-child {
+    background: rgb(255, 38, 38);
+    margin-top: auto;
+}

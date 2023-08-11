@@ -1,8 +1,6 @@
-let tg = window.Telegram.WebApp;
-tg.expand();
+import { initTg, getUserId, baseUrl } from "../main.js";
 
-tg.showConfirm("DAta", tg.colorScheme);
-
+let tg = initTg();
 const slider = document.getElementById("temp");
 const output = document.getElementById("t-out");
 
@@ -27,6 +25,7 @@ slider.addEventListener("input", (ev) => {
   tempValue = ev.target.value;
 });
 
+tg.MainButton.text = "СОХРАНИТЬ";
 tg.onEvent("mainButtonClicked", () => {
   tg.sendData(tempValue);
 });

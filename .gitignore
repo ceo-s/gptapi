@@ -1,3 +1,4 @@
+.vscode
 .env
 alembic.ini
 test.py
