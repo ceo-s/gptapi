@@ -1,10 +1,12 @@
+from ..mixins import mixins as M
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.orm import declared_attr
 from sqlalchemy import String, BigInteger, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
+from pgvector.sqlalchemy import Vector
+from openai import Embedding
 
-from .instance import BASE
-from . import mixins as M
+from db.instance import BASE
 
 
 class User(M.ClassNamed, BASE):
@@ -14,6 +16,13 @@ class User(M.ClassNamed, BASE):
     first_name: Mapped[str] = mapped_column(String(32))
 
     settings: Mapped["UserSettings"] = relationship(
+        back_populates="user",
+        cascade="all, delete",
+        uselist=False,
+        lazy="selectin",
+    )
+
+    collection: Mapped["Collection"] = relationship(
         back_populates="user",
         cascade="all, delete",
         uselist=False,

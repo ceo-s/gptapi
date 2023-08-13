@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 from static import get_page
 
 from services.db import get_user, update_user, update_user_settings
-from db.relational import interfaces as I
+from db import interfaces as I
 
 
 router = APIRouter()

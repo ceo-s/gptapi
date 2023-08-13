@@ -72,14 +72,14 @@ class GDrive:
             # TODO(developer) - Handle errors from drive API.
             print(f'An error occurred: {error}')
 
-    def mkdir(self, name: str, parent_folder: str = None):
+    async def mkdir(self, name: str, parent_folder: str = None):
         if parent_folder is None:
             parent_folder = self.BASEDIR_ID
         metadata = {'name': name,
                     'mimeType': 'application/vnd.google-apps.folder',
                     'parents': [parent_folder]}
         try:
-            file = self.service.files().create(body=metadata, fields="id").execute()
+            file = await self.service.files().create(body=metadata, fields="id").execute()
 
         except HttpError as error:
             print(f'An error occurred: {error}')

@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from services.drive import GDrive
 from services.db import get_user, register_user, update_user, update_user_settings
-from db.relational import interfaces as I
+from db import interfaces as I
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ async def authenticate_user(user_data: I.User):
     if not user:
         await register_user(user_data)
 
-        GDrive().mkdir(user_data.username)
+        await GDrive().mkdir(user_data.username)
         return {"authenticated": False}
 
     return {"authenticated": True}

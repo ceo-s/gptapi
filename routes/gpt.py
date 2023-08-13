@@ -1,8 +1,7 @@
 from fastapi import APIRouter
-from db.relational import interfaces as I
+from db import interfaces as I
 
 from services.llm import generate_prompt, history_add_message, chat_completion
-from services.llm.db import get_context, get_collection_size
 from services.db import get_user, update_user_settings
 from services.drive import GDrive
 
@@ -12,7 +11,8 @@ router = APIRouter()
 @router.post("/chat-compeltion/")
 async def get_chat_completion(q_user: I.UserQuery):
     user = await get_user(q_user.id)
-    context = get_context(q_user.id, q_user.query)
+    # context = get_context(q_user.id, q_user.query)
+    context = ""
     prompt = generate_prompt(user.settings.prompt, context)
     history = user.settings.history
 
@@ -47,14 +47,8 @@ async def get_chat_completion(q_user: I.UserQuery):
     return {"answer": model_answer}
 
 
-@router.post("update-documents")
-async def update_documents(user: I.OUser):
-    files = GDrive().listdir(user.username)
-    updates = GDrive().check_updates()
+@router.get("/update-documents/")
+async def update_documents(user_id: int, username: str, document_text: str):
+    print(user_id, username, document_text)
 
-    # file_ids_map = map(lambda x: x["id"], files)
-    # col_size = get_collection_size(user.id)
-    # print(f"COL SIZE {col_size} & LEN FILES {len(files)}")
-    # print(user.id)
-    # print(user.username)
-    return {"result": "succ ass"}
+    return {"succ": "ass"}

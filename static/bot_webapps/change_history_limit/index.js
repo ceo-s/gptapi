@@ -68,9 +68,11 @@ function hideAlertMessage() {
 slider.addEventListener("input", reactiveDataGeneration);
 
 const userId = getUserId();
+tg.showAlert("AAA");
 
 tg.MainButton.text = "СОХРАНИТЬ";
 tg.onEvent("mainButtonClicked", async () => {
+  tg.showAlert("AAA");
   await fetch(`${baseUrl}/pages/post-change-history-limit/`, {
     method: "post",
     headers: {

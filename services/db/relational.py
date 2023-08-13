@@ -2,9 +2,9 @@ import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, bindparam, delete
 
-from db.relational import get_sessionmaker
-from db.relational.models import User, UserSettings
-from db.relational import interfaces as I
+from db import get_sessionmaker
+from db.models.users import User, UserSettings
+from db import interfaces as I
 
 
 async def get_user(user_id: int) -> User | None:
@@ -43,7 +43,7 @@ async def register_user(user: I.OUser) -> None:
 
 
 async def update_user(user: I.OUser) -> None:
-    user_dict = user.dict()
+    user_dict = user.model_dump()
     user_dict.pop("id")
     user_dict.pop("settings")
     values_to_change = dict(
@@ -66,7 +66,7 @@ async def update_user_settings(user_id: int, settings: I.OSettings | None) -> No
     if settings is None:
         return
 
-    settings_dict = settings.dict()
+    settings_dict = settings.model_dump()
     values_to_change = dict(
         filter(lambda key_val: key_val[1] is not None, settings_dict.items()))
     if not values_to_change:
