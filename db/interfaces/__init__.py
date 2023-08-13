@@ -1,2 +1,2 @@
-from .user import Settings, OSettings, User, OUser, UserQuery
-from .embedding_db import Collection, Document, DocumentMetadata
+from .user import Settings, OSettings, BaseUser, User, OUser, UserQuery
+from .embedding import Collection, Document, DocumentMetadata

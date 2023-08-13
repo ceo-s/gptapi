@@ -1,9 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from functools import wraps
 from typing import Optional
 
 
 class Settings(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     history: list[dict[str, str]]
     prompt: str
     model_temperature: float
@@ -17,10 +19,15 @@ class OSettings(BaseModel):
     history_size: Optional[int] = None
 
 
-class User(BaseModel):
+class BaseUser(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     first_name: str
+
+
+class User(BaseUser):
     settings: Optional[OSettings] = None
 
 

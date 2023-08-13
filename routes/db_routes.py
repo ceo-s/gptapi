@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from services.drive import GDrive
 from services.db import get_user, register_user, update_user, update_user_settings
+from services.db import User
 from db import interfaces as I
 
 router = APIRouter()
@@ -9,9 +10,10 @@ router = APIRouter()
 
 @router.post("/auth-user/")
 async def authenticate_user(user_data: I.User):
-    user = await get_user(user_data.id)
-
-    if not user:
+    # user = await get_user(user_data.id)
+    user = await User(user_data)
+    user
+    if user:
         await register_user(user_data)
 
         await GDrive().mkdir(user_data.username)
