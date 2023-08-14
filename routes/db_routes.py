@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from services.drive import GDrive
-from services.db import User2
+from services.db import User
 from db import interfaces as I
 
 router = APIRouter()
@@ -10,8 +10,8 @@ router = APIRouter()
 @router.post("/auth-user/")
 async def authenticate_user(user_data: I.User):
     # user = await get_user(user_data.id)
-    user = await User2.from_pydantic(user_data)
-
+    user = await User.from_pydantic(user_data)
+    print(user_data.username)
     # print(f"{user.username=}")
     # print(f"{user.is_new=}")
     print(user.is_new)
@@ -25,22 +25,21 @@ async def authenticate_user(user_data: I.User):
 
 @router.post("/get-user-data/")
 async def get_user_data(user_data: I.OUser):
-    # user = await get_user(user.id)
-    user = await User2.from_id(user_data.id)
-    print("AAA", user.settings.prompt)
+    user = await User.from_id(user_data.id)
+
     if not user:
         raise Exception("User was not found!")
+    print(user.to_dict())
+    return user.to_dict()
 
-    return user.__dict__
 
+@router.post("/update-user-data/")
+async def update_user_data(user_data: I.OUser):
+    print(user_data.__dict__)
+    user = await User.from_id(user_data.id)
 
-# @router.post("/update-user-data/")
-# async def update_user_data(user: I.OUser):
-#     print(user.__dict__)
-#     user_ = User()
-#     await user_.ainit(user.id)
+    async with user.update() as updated_user:
+        updated_user.username = "vanu4ka"
+        print("UPDATED USER", updated_user)
 
-#     async with user_.update() as updated_user:
-#         ...
-
-#     return {"Succsess": "200"}
+    return {"Succsess": "200"}

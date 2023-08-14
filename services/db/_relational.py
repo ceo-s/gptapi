@@ -9,98 +9,98 @@ from db import interfaces as I
 from functools import singledispatchmethod
 
 
+# class _Settings:
+
+#     def __init__(self, __settings: UM.UserSettings):
+#         self._settings = __settings
+
+#     async def _update(self):
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+#             await db_session.merge(self._settings)
+
+
+# class _User:
+
+#     def __init__(self) -> None:
+#         ...
+
+#     async def ainit(self, *args, **kwargs):
+#         self.__init__()
+#         self._user: UM.User
+#         self.is_new = False
+#         await self.__init_argument(args[0])
+
+#     @singledispatchmethod
+#     async def __init_argument(self):
+#         ...
+
+#     @__init_argument.register
+#     async def _(self, __user_id: int):
+#         self._user = await self._get(__user_id)
+
+#     @__init_argument.register
+#     async def _(self, __user: I.User):
+#         self._user = await self._get_or_create(__user)
+
+#     async def _create(self, user: I.User) -> UM.User:
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+
+#             user = UM.User(
+#                 id=user.id,
+#                 username=user.username,
+#                 first_name=user.first_name,
+#             )
+
+#             user_settings = UM.UserSettings(
+#                 model_temperature=0.5,
+#                 prompt="Ты - полезный чат-бот.",
+#                 history=[],
+#                 history_size=100,
+#             )
+
+#             user.settings = user_settings
+#             await db_session.merge(user)
+
+#             await db_session.refresh(user)
+#             await db_session.expunge_all()
+#             return user
+
+#     async def _get(self, user_id) -> UM.User | None:
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+#             res = await db_session.execute(
+#                 select(UM.User)
+#                 .where(UM.User.id == user_id)
+#             )
+
+#             user = res.scalar_one_or_none()
+
+#             db_session.expunge_all()
+#             return user
+
+#     async def _get_or_create(self, user: I.User) -> UM.User:
+#         user = self._get(user.id)
+#         if user is None:
+#             user = self._create(user)
+#             self.is_new = True
+
+#         return user
+
+#     async def _update(self):
+
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+#             await db_session.merge(self._user)
+
+#     async def _delete(self):
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+#             await db_session.delete(self._user)
+
+
 class _Settings:
-
-    def __init__(self, __settings: UM.UserSettings):
-        self._settings = __settings
-
-    async def _update(self):
-        async with get_sessionmaker().begin() as db_session:
-            db_session: AsyncSession
-            await db_session.merge(self._settings)
-
-
-class _User:
-
-    def __init__(self) -> None:
-        ...
-
-    async def ainit(self, *args, **kwargs):
-        self.__init__()
-        self._user: UM.User
-        self.is_new = False
-        await self.__init_argument(args[0])
-
-    @singledispatchmethod
-    async def __init_argument(self):
-        ...
-
-    @__init_argument.register
-    async def _(self, __user_id: int):
-        self._user = await self._get(__user_id)
-
-    @__init_argument.register
-    async def _(self, __user: I.User):
-        self._user = await self._get_or_create(__user)
-
-    async def _create(self, user: I.User) -> UM.User:
-        async with get_sessionmaker().begin() as db_session:
-            db_session: AsyncSession
-
-            user = UM.User(
-                id=user.id,
-                username=user.username,
-                first_name=user.first_name,
-            )
-
-            user_settings = UM.UserSettings(
-                model_temperature=0.5,
-                prompt="Ты - полезный чат-бот.",
-                history=[],
-                history_size=100,
-            )
-
-            user.settings = user_settings
-            await db_session.merge(user)
-
-            await db_session.refresh(user)
-            await db_session.expunge_all()
-            return user
-
-    async def _get(self, user_id) -> UM.User | None:
-        async with get_sessionmaker().begin() as db_session:
-            db_session: AsyncSession
-            res = await db_session.execute(
-                select(UM.User)
-                .where(UM.User.id == user_id)
-            )
-
-            user = res.scalar_one_or_none()
-
-            db_session.expunge_all()
-            return user
-
-    async def _get_or_create(self, user: I.User) -> UM.User:
-        user = self._get(user.id)
-        if user is None:
-            user = self._create(user)
-            self.is_new = True
-
-        return user
-
-    async def _update(self):
-
-        async with get_sessionmaker().begin() as db_session:
-            db_session: AsyncSession
-            await db_session.merge(self._user)
-
-    async def _delete(self):
-        async with get_sessionmaker().begin() as db_session:
-            db_session: AsyncSession
-            await db_session.delete(self._user)
-
-
-class _Settings2:
 
     def __init__(self, __settings: UM.UserSettings) -> None:
         self._settings = __settings
@@ -112,7 +112,7 @@ class _Settings2:
             setattr(self, attr, getattr(self._settings, attr))
 
 
-class _User2:
+class _User:
 
     def __init__(self) -> None:
         self._user: UM.User
@@ -129,15 +129,12 @@ class _User2:
     @classmethod
     async def from_pydantic(cls, __parent_cls, __user: I.User):
         self = __parent_cls
-        print("SELF", self)
-        # self.__init__()
         self._user = await self._get_or_create(__user)
         print(self.is_new)
 
     @classmethod
     async def from_id(cls, __parent_cls, __user_id: int):
         self = __parent_cls
-        print("SELF", self)
         self._user = await self._get(__user_id)
 
     async def _create(self, __user: I.User) -> UM.User:
@@ -187,6 +184,11 @@ class _User2:
             # print(f"IMA REALLY CREATING {user.settings}")
         # print(f"IMA GET OR CREATE {user.settings}")
         return user
+
+    async def _update(self):
+        async with get_sessionmaker().begin() as db_session:
+            db_session: AsyncSession
+            await db_session.merge(self._user)
 
 # async def get_user(user_id: int) -> UM.User | None:
 #     async with get_sessionmaker().begin() as db_session:

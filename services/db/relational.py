@@ -9,93 +9,96 @@ from db import interfaces as I
 from db.models.users import User
 
 from ._relational import _Settings, _User
-from ._relational import _Settings2, _User2
+# from ._relational import _Settings2, _User2
 from ._interfaces import IUser, ISettings, IUpdatable
+
+
+# class Settings(_Settings, ISettings):
+
+#     def __init__(self, __settings: I.OSettings) -> None:
+#         super().__init__(__settings)
+#         settings = I.Settings.model_validate(self._settings)
+#         self.__migrate_fields(settings)
+
+#     def __migrate_fields(self, settings: I.Settings):
+#         for attr, value in settings:
+#             setattr(self, attr, value)
+
+#     async def update(self):
+#         return self
+
+#     async def __aenter__(self):
+#         ...
+
+#     async def __aexit__(self, exc_type, exc_value, traceback):
+#         for attr in vars(IUser)["__annotations__"].keys():
+#             setattr(self._settings, attr, getattr(self, attr))
+#         self._update()
+
+
+# class User(_User, IUser):
+
+#     def __init__(self):
+#         super().__init__()
+
+#     @overload
+#     async def ainit(self, __user_id: int): ...
+#     @overload
+#     async def ainit(self, __user: I.User): ...
+
+#     async def ainit(self, *args, **kwargs):
+#         await super().ainit(*args, **kwargs)
+#         print(f"{self._user=}")
+#         print(f"{vars(self._user)=}")
+#         user = I.BaseUser.model_validate(self._user)
+
+#         await self.__migrate_fields(user)
+#         self.settings = Settings(self._user.settings)
+#         ...
+
+#     async def __migrate_fields(self, user: I.BaseUser):
+#         for attr, value in user:
+#             setattr(self, attr, value)
+
+#     async def get(self, user_id) -> User | None:
+#         return await super()._get(user_id)
+
+#     async def get_or_create(self, user: I.User) -> User:
+#         return await super()._get_or_create(user)
+
+#     async def update(self):
+#         return self
+
+#     async def __aenter__(self):
+#         return self
+
+#     async def __aexit__(self, exc_type, exc_value, traceback):
+#         for attr in vars(IUser)["__annotations__"].keys():
+#             setattr(self._user, attr, getattr(self, attr))
+#         self._update()
 
 
 class Settings(_Settings, ISettings):
 
-    def __init__(self, __settings: I.OSettings) -> None:
+    def __init__(self, __settings: UM.UserSettings) -> None:
         super().__init__(__settings)
-        settings = I.Settings.model_validate(self._settings)
-        self.__migrate_fields(settings)
 
-    def __migrate_fields(self, settings: I.Settings):
-        for attr, value in settings:
-            setattr(self, attr, value)
+    def to_dict(self):
+        return self.__dict__
 
-    async def update(self):
+    def update(self):
         return self
 
     async def __aenter__(self):
-        ...
+        return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         for attr in vars(IUser)["__annotations__"].keys():
-            setattr(self._settings, attr, getattr(self, attr))
+            setattr(self._user, attr, getattr(self, attr))
         self._update()
 
 
 class User(_User, IUser):
-
-    def __init__(self):
-        super().__init__()
-
-    @overload
-    async def ainit(self, __user_id: int): ...
-    @overload
-    async def ainit(self, __user: I.User): ...
-
-    async def ainit(self, *args, **kwargs):
-        await super().ainit(*args, **kwargs)
-        print(f"{self._user=}")
-        print(f"{vars(self._user)=}")
-        user = I.BaseUser.model_validate(self._user)
-
-        await self.__migrate_fields(user)
-        self.settings = Settings(self._user.settings)
-        ...
-
-    async def __migrate_fields(self, user: I.BaseUser):
-        for attr, value in user:
-            setattr(self, attr, value)
-
-    async def get(self, user_id) -> User | None:
-        return await super()._get(user_id)
-
-    async def get_or_create(self, user: I.User) -> User:
-        return await super()._get_or_create(user)
-
-    async def update(self):
-        return self
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        for attr in vars(IUser)["__annotations__"].keys():
-            setattr(self._user, attr, getattr(self, attr))
-        self._update()
-
-
-class Settings2(_Settings2, ISettings):
-
-    def __init__(self, __settings: UM.UserSettings) -> None:
-        super().__init__(__settings)
-
-    async def update(self):
-        return self
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        for attr in vars(IUser)["__annotations__"].keys():
-            setattr(self._user, attr, getattr(self, attr))
-        self._update()
-
-
-class User2(_User2, IUser):
 
     # def __new__(cls, *args, **kwargs):
     #     print("THIS IS USER2 cls in new", cls)
@@ -108,8 +111,7 @@ class User2(_User2, IUser):
     async def from_pydantic(cls, __user: I.User):
         self = cls()
         await super().from_pydantic(self, __user)
-        self.__migrate_info(self._user)
-        print("VARS SELF", vars(self))
+        self.__migrate_fields()
 
         return self
 
@@ -117,27 +119,42 @@ class User2(_User2, IUser):
     async def from_id(cls, __user_id: int):
         self = cls()
         await super().from_id(self, __user_id)
-        self.__migrate_info(self._user)
-        print("VARS SELF", vars(self))
-        self.settings = Settings2(self._user.settings)
+        self.__migrate_fields()
 
         return self
 
-    def __migrate_info(self, user: UM.User):
+    def __migrate_fields(self):
+        self.__migrate_info()
+        self.__migrate_settings()
+        self.__migrate_collection()
+
+    def __migrate_info(self):
         print(I.BaseUser.__fields__)
         for attr in I.BaseUser.__fields__:
-            setattr(self, attr, getattr(user, attr))
+            setattr(self, attr, getattr(self._user, attr))
 
     def __migrate_settings(self):
-        ...
+        self.settings = Settings(self._user.settings)
 
-    async def update(self):
+    def __migrate_collection(self):
+        self.collection = None
+
+    def to_dict(self):
+        dict_ = self.__dict__.copy()
+        dict_["settings"] = dict_["settings"].to_dict()
+        return dict_
+
+    def update(self):
         return self
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        for attr in vars(IUser)["__annotations__"].keys():
+        fields = I.User.__fields__.copy()
+        fields.pop("settings")
+        print("FieldAAAAAAA", fields)
+        for attr in fields:
+            print(attr)
             setattr(self._user, attr, getattr(self, attr))
         self._update()

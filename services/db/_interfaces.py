@@ -28,6 +28,7 @@ class IUser(IUpdatable):
     username: str
     first_name: str
     settings: ISettings
+    collection: "ICollection"
 
 
 class IDocumentMetadata:
