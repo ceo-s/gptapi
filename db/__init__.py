@@ -5,4 +5,4 @@ from .instance import ENGINE, BASE
 
 
 def get_sessionmaker() -> sessionmaker:
-    return sessionmaker(ENGINE, class_=AsyncSession)
+    return sessionmaker(ENGINE, class_=AsyncSession, expire_on_commit=False)

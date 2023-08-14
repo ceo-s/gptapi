@@ -14,9 +14,9 @@ OPENAI_EMBEDDING_SIZE = 1536
 class Collection(M.AutoIncrement, M.ClassNamed, BASE):
     documents: Mapped[list["Document"]] = relationship(
         back_populates="collection",
-        cascade="all, delete",
-        uselist=False,
-        lazy="selectin",
+        cascade="all, delete-orphan",
+        uselist=True,
+        lazy="joined",
     )
 
     user_fk: Mapped[int] = mapped_column(
@@ -25,16 +25,16 @@ class Collection(M.AutoIncrement, M.ClassNamed, BASE):
         back_populates="collection",
         cascade="all, delete",
         uselist=False,
-        lazy="selectin",
+        lazy="joined",
     )
 
 
 class Document(M.AutoIncrement, M.ClassNamed, BASE):
     metadata_: Mapped["DocumentMetadata"] = relationship(
         back_populates="document",
-        cascade="all, delete",
+        cascade="all, delete-orphan",
         uselist=False,
-        lazy="selectin",
+        lazy="joined",
     )
     embedding = mapped_column(Vector(OPENAI_EMBEDDING_SIZE))
 
@@ -44,7 +44,7 @@ class Document(M.AutoIncrement, M.ClassNamed, BASE):
     collection: Mapped["Collection"] = relationship(
         back_populates="documents",
         cascade="all, delete",
-        lazy="selectin",
+        lazy="joined",
     )
 
 
@@ -65,5 +65,5 @@ class DocumentMetadata(M.AutoIncrement, BASE):
         back_populates="metadata_",
         cascade="all, delete",
         uselist=False,
-        lazy="selectin",
+        lazy="joined",
     )

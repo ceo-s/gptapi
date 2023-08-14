@@ -19,14 +19,14 @@ class User(M.ClassNamed, BASE):
         back_populates="user",
         cascade="all, delete",
         uselist=False,
-        lazy="selectin",
+        lazy="joined",
     )
 
     collection: Mapped["Collection"] = relationship(
         back_populates="user",
-        cascade="all, delete",
+        cascade="all, delete-orphan",
         uselist=False,
-        lazy="selectin",
+        lazy="joined",
     )
 
     def __repr__(self) -> str:
@@ -47,8 +47,8 @@ class UserSettings(M.AutoIncrement, BASE):
         back_populates="settings",
         cascade="all, delete",
         uselist=False,
-        lazy="selectin",
+        lazy="joined",
     )
 
     def __repr__(self) -> str:
-        return f"{self.user.first_name} settings."
+        return f"Some user settings."

@@ -115,7 +115,7 @@ class _Collection:
                 break
 
 
-col = _Collection()
+# col = _Collection()
 
 # class _Collection:
 #     @overload

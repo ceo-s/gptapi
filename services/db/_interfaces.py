@@ -22,6 +22,8 @@ class ISettings(IUpdatable):
 
 
 class IUser(IUpdatable):
+    is_new: bool
+
     id: int
     username: str
     first_name: str
