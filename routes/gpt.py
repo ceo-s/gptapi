@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from db import interfaces as I
 
 from services.llm import generate_prompt, history_add_message, chat_completion
-from services.db import User
+from services.db import get_user
 from services.drive import GDrive
 
 router = APIRouter()
@@ -45,10 +45,3 @@ router = APIRouter()
 
 #     print(history)
 #     return {"answer": model_answer}
-
-
-# @router.get("/update-documents/")
-# async def update_documents(user_id: int, username: str, document_text: str):
-#     print(user_id, username, document_text)
-
-#     return {"succ": "ass"}

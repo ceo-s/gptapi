@@ -22,6 +22,12 @@ class Document(BaseModel):
     metadata: Optional[DocumentMetadata] = Field(
         default=None, alias="metadata_")
 
+    def __str__(self) -> str:
+        return f"Document <{self.metadata.name}>"
+
+    def __repr__(self) -> str:
+        return f"Document <{self.metadata.name}>"
+
 
 class Collection(BaseModel):
     model_config = ConfigDict(from_attributes=True)

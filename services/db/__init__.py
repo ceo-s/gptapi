@@ -1,2 +1,2 @@
-from .relational import User, Settings
-# from .relational import User2
+from .relational import get_user, update_user, update_user_settings, register_user
+from .embedding import *
