@@ -29,7 +29,8 @@ class Collection(M.AutoIncrement, M.ClassNamed, BASE):
     )
 
 
-class Document(M.AutoIncrement, M.ClassNamed, BASE):
+class Document(M.ClassNamed, BASE):
+    file_id: Mapped[str] = mapped_column(primary_key=True)
     metadata_: Mapped["DocumentMetadata"] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
@@ -39,11 +40,11 @@ class Document(M.AutoIncrement, M.ClassNamed, BASE):
     embedding = mapped_column(Vector(OPENAI_EMBEDDING_SIZE))
 
     collection_fk: Mapped[int] = mapped_column(
-        ForeignKey("collection.id", ondelete="CASCADE")
+        ForeignKey("collection.id")
     )
     collection: Mapped["Collection"] = relationship(
         back_populates="documents",
-        cascade="all, delete",
+        # cascade="all, delete",
         lazy="joined",
     )
 
@@ -51,7 +52,6 @@ class Document(M.AutoIncrement, M.ClassNamed, BASE):
 class DocumentMetadata(M.AutoIncrement, BASE):
     __tablename__ = "document_metadata"
 
-    file_id: Mapped[str] = mapped_column()
     name: Mapped[str] = mapped_column()
     description: Mapped[str] = mapped_column()
     token_cost: Mapped[int] = mapped_column()
@@ -59,7 +59,7 @@ class DocumentMetadata(M.AutoIncrement, BASE):
     date_update: Mapped[datetime] = mapped_column(DateTime())
 
     document_fk: Mapped[int] = mapped_column(
-        ForeignKey("document.id", ondelete="CASCADE")
+        ForeignKey("document.file_id", ondelete="CASCADE")
     )
     document: Mapped["Document"] = relationship(
         back_populates="metadata_",

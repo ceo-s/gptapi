@@ -1,8 +1,8 @@
 """
 
-Revision ID: f943091303a7
+Revision ID: d80cf30b88c3
 Revises: 
-Create Date: 2023-08-14 15:28:31.104589
+Create Date: 2023-08-15 16:42:59.226092
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 from pgvector.sqlalchemy import Vector
 
 # revision identifiers, used by Alembic.
-revision: str = 'f943091303a7'
+revision: str = 'd80cf30b88c3'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -44,22 +44,21 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('document',
+    sa.Column('file_id', sa.String(), nullable=False),
     sa.Column('embedding', Vector(dim=1536), nullable=True),
     sa.Column('collection_fk', sa.Integer(), nullable=False),
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.ForeignKeyConstraint(['collection_fk'], ['collection.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.ForeignKeyConstraint(['collection_fk'], ['collection.id'], ),
+    sa.PrimaryKeyConstraint('file_id')
     )
     op.create_table('document_metadata',
-    sa.Column('file_id', sa.String(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('description', sa.String(), nullable=False),
     sa.Column('token_cost', sa.Integer(), nullable=False),
     sa.Column('date_creation', sa.DateTime(), nullable=False),
     sa.Column('date_update', sa.DateTime(), nullable=False),
-    sa.Column('document_fk', sa.Integer(), nullable=False),
+    sa.Column('document_fk', sa.String(), nullable=False),
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.ForeignKeyConstraint(['document_fk'], ['document.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['document_fk'], ['document.file_id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

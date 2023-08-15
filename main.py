@@ -16,5 +16,5 @@ register_routers(app=app)
 #     "https://7e9b-188-243-182-231.ngrok-free.app")
 
 # if __name__ == '__main__':
-#     uvicorn.run("app:main", host="127.0.0.1",
-#                 port=8080, reload=True, workers=3)
+#     uvicorn.run("app:main", host="0.0.0.0",
+#                 port=8080, reload=True)

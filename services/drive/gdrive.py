@@ -3,7 +3,8 @@ from __future__ import print_function
 from os import path
 from pprint import pp
 
-from google.auth.transport._aiohttp_requests import Request
+# from google.auth.transport._aiohttp_requests import Request
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
@@ -27,6 +28,14 @@ class GDrive:
         self.authorize()
         self.service = self.__init_service()
 
+    # @classmethod
+    # async def ainit(cls):
+    #     self = cls()
+    #     self.creds = self.__init_creds()
+    #     await self.authorize()
+    #     self.service = self.__init_service()
+    #     return self
+
     def __del__(self):
         print("Deleting", self.__dict__)
         ...
@@ -44,7 +53,7 @@ class GDrive:
         service = build('drive', 'v3', credentials=self.creds)
         return service
 
-    async def authorize(self):
+    def authorize(self):
         creds = self.creds
         assert creds is self.creds
         if not creds or not creds.valid:
@@ -71,7 +80,7 @@ class GDrive:
             # TODO(developer) - Handle errors from drive API.
             print(f'An error occurred: {error}')
 
-    async def mkdir(self, name: str, parent_folder: str = None):
+    def mkdir(self, name: str, parent_folder: str = None):
         if parent_folder is None:
             parent_folder = self.BASEDIR_ID
         metadata = {'name': name,

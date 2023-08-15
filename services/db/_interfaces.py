@@ -21,18 +21,14 @@ class ISettings(IUpdatable):
     history_size: int
 
 
-class IUser(IUpdatable):
-    is_new: bool
-
+class IUser(ABC):
     id: int
     username: str
     first_name: str
     settings: ISettings
-    collection: "ICollection"
 
 
-class IDocumentMetadata:
-    file_id: str
+class IDocumentMetadata(ABC):
     name: str
     description: str
     token_cost: int
@@ -40,8 +36,9 @@ class IDocumentMetadata:
     date_update: datetime
 
 
-class IDocument(IUpdatable):
-    metadata: dict
+class IDocument(ABC):
+    file_id: str
+    metadata_: IDocumentMetadata
     embedding: list[float]
 
 

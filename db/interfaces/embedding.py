@@ -7,7 +7,6 @@ from .user import User
 class DocumentMetadata(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    file_id: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     token_cost: Optional[int] = None
@@ -18,6 +17,7 @@ class DocumentMetadata(BaseModel):
 class Document(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    file_id: Optional[str] = None
     embedding: Optional[list[float]] = None
     metadata: Optional[DocumentMetadata] = Field(
         default=None, alias="metadata_")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from services.drive import GDrive
-from services.db import get_user, register_user, update_user, update_user_settings
+from services.db import DBUser
 from services.db.embedding import UserCollection
 from db import interfaces as I
 
@@ -10,16 +10,12 @@ router = APIRouter()
 
 @router.post("/auth-user/")
 async def authenticate_user(user_data: I.User):
-    # user = await get_user(user_data.id)
-    # user = await User.from_pydantic(user_data)
-    user = await get_user(user_data.id)
-    print(user_data.username)
-    # print(f"{user.username=}")
-    # print(f"{user.is_new=}")
 
-    if user is None:
-        await register_user(user_data)
-        await GDrive().mkdir(user_data.username)
+    user = await DBUser.from_id(user_data.id)
+
+    if not user:
+        await user.create(user_data.username, user_data.first_name)
+        GDrive().mkdir(user_data.username)
         return {"authenticated": False}
 
     return {"authenticated": True}
@@ -27,39 +23,46 @@ async def authenticate_user(user_data: I.User):
 
 @router.post("/get-user-data/")
 async def get_user_data(user_data: I.OUser):
-    # user = await User.from_id(user_data.id)
-    user = await get_user(user_data.id)
+    user = await DBUser.from_id(user_data.id)
 
-    if not user:
-        raise Exception("User was not found!")
-
-    return user.__dict__
+    return user.dict()
 
 
 @router.post("/update-user-data/")
 async def update_user_data(user_data: I.OUser):
-    print(user_data)
+    user_dict = user_data.model_dump()
+    user_dict.pop("id")
+    settings_dict = user_dict.pop("settings", {})
 
-    await update_user(user_data)
-    if user_data.settings:
-        print("UPDATING THIS SHIT")
-        await update_user_settings(user_data.id, user_data.settings)
+    user = await DBUser.from_id(user_data.id)
+    async with user.update() as user_to_update:
+        for attr, val in user_dict.items():
+            if val is not None:
+                setattr(user_to_update, attr, val)
+
+        for attr, val in settings_dict.items():
+            if val is not None:
+                setattr(user_to_update.settings, attr, val)
 
     return {"Succsess": "200"}
 
 
 @router.get("/update-documents/")
 async def update_documents(user_id: int, username: str, document_text: str):
-    print("IN UPDATE DOCS", user_id, username, document_text)
+    print("IM HEREE!!!")
     collection = await UserCollection.from_user(user_id)
 
-    await collection.add_document(document_text, file_id="1",
-                                  name="govno", description="AAA", token_cost=10)
-    await collection.add_document(document_text+"aaa", file_id="2",
-                                  name="govno2", description="AAA2", token_cost=10)
-    # await collection.add_document(document_text, metadata=I.DocumentMetadata(
-    #     file_id="1", name="govno", description="AAA", token_cost=10
+    # await collection.add_document("1", "AAAA", metadata=I.DocumentMetadata(
+    #     name="govno", description="AAA", token_cost=10
     # ))
+
+    # document = await collection.update_document("2")
+    # document.metadata_.description = "TI BARAN"
+    # async with collection.update_document("2") as document:
+    #     document.metadata_.description = "Hi"
+    #     document.metadata_.name = "Bye"
+    await collection.delete_document("1")
+    # await collection.delete_document("2")
+    # await collection.delete_document("3")
     await collection.commit()
-    print(f"{collection.__dict__}")
     return {"succ": "ass"}
