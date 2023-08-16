@@ -44,7 +44,6 @@ class Document(M.ClassNamed, BASE):
     )
     collection: Mapped["Collection"] = relationship(
         back_populates="documents",
-        # cascade="all, delete",
         lazy="joined",
     )
 

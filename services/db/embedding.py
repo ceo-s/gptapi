@@ -122,7 +122,6 @@ class DocumentFactory:
             date_update=now,
         )
         await self.__create_document(file_id, text, metadata=metadata)
-        # self.__documents_buffer.append(document)
 
     def __find_document(self, file_id: str) -> EM.Document:
         documents = list(filter(lambda x: x.file_id ==
@@ -134,7 +133,6 @@ class DocumentFactory:
     def update_document(self, file_id: str) -> DocumentUpdator:
         document = self.__find_document(file_id)
         return DocumentUpdator(document)
-        # self.__buffer_append(document, DocumentStatus.UPDATE)
 
     async def delete_document(self, file_id: str):
         document = self.__find_document(file_id)
@@ -166,7 +164,7 @@ class DocumentFactory:
                         doc = await self.__pydantic_to_orm(buff_el.document)
                         doc.collection = self._collection
                         db_session.add(doc)
-                    case DocumentStatus.UPDATE:
+                    case DocumentStatus.UPDATE:  # this will never be called actualy
                         doc = await self.__pydantic_to_orm(buff_el.document)
                         doc.collection = self._collection
                         doc.metadata_.date_update = datetime.datetime.now()
