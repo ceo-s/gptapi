@@ -6,7 +6,7 @@ from db import get_sessionmaker
 from db.models import users as UM
 from db.models import embeddings as EM
 from db import interfaces as I
-from ._interfaces import IUser
+from .._interfaces import IUser
 
 
 class UserUpdator:

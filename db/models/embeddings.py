@@ -29,14 +29,15 @@ class Collection(M.AutoIncrement, M.ClassNamed, BASE):
     )
 
 
-class Document(M.ClassNamed, BASE):
-    file_id: Mapped[str] = mapped_column(primary_key=True)
+class Document(M.AutoIncrement, M.ClassNamed, BASE):
+    file_id: Mapped[str] = mapped_column()
     metadata_: Mapped["DocumentMetadata"] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
         uselist=False,
         lazy="joined",
     )
+    text: Mapped[str] = mapped_column()
     embedding = mapped_column(Vector(OPENAI_EMBEDDING_SIZE))
 
     collection_fk: Mapped[int] = mapped_column(
@@ -58,7 +59,7 @@ class DocumentMetadata(M.AutoIncrement, BASE):
     date_update: Mapped[datetime] = mapped_column(DateTime())
 
     document_fk: Mapped[int] = mapped_column(
-        ForeignKey("document.file_id", ondelete="CASCADE")
+        ForeignKey("document.id", ondelete="CASCADE")
     )
     document: Mapped["Document"] = relationship(
         back_populates="metadata_",

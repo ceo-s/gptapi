@@ -14,34 +14,6 @@ class IUpdatable(ABC):
     async def __aexit__(self, exc_type, exc_value, traceback): ...
 
 
-class ISettings(IUpdatable):
-    history: list[dict[str, str]]
-    prompt: str
-    model_temperature: float
-    history_size: int
-
-
-class IUser(ABC):
-    id: int
-    username: str
-    first_name: str
-    settings: ISettings
-
-
-class IDocumentMetadata(ABC):
-    name: str
-    description: str
-    token_cost: int
-    date_creation: datetime
-    date_update: datetime
-
-
-class IDocument(ABC):
-    file_id: str
-    metadata_: IDocumentMetadata
-    embedding: list[float]
-
-
 class ICollection(IUpdatable):
 
     @abstractmethod
@@ -58,3 +30,9 @@ class ICollection(IUpdatable):
 
     @abstractmethod
     async def pop(self): ...
+
+
+# class ITextPreprocessor(ABC):
+
+#     @abstractmethod
+#     def split_into_junks(self): ...

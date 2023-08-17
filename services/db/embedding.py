@@ -1,36 +1,15 @@
-from typing import overload, Any, Never, NamedTuple
+from typing import overload, Type, NamedTuple
 from enum import Enum
-from functools import singledispatchmethod
 import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, bindparam, delete
-from abc import ABC, abstractstaticmethod, abstractclassmethod, abstractmethod
+from sqlalchemy import select
 
 from db import get_sessionmaker
 from db.models import users as UM
 from db.models import embeddings as EM
 from db import interfaces as I
-from ._interfaces import ICollection, IDocument, IDocumentMetadata
-from openai import Embedding
-
-from dotenv import load_dotenv
-import openai
-import os
-
-load_dotenv(".env")
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-
-class Embedder:
-    @staticmethod
-    async def text_to_embedding(text: str):
-        print("CREATING EMBEDDING")
-        # embedding = await Embedding.acreate(
-        #     input=[text], model="text-embedding-ada-002")
-        # print("AFTER EMBEDDING")
-        # return embedding["data"][0]["embedding"]
-        return [6.] * 1536
+from .._interfaces import IOptimizer, IEmbedder, IDocument
+# from ..llm.preprocessing import Embedder
 
 
 class DocumentStatus(Enum):
@@ -64,16 +43,17 @@ class DocumentUpdator:
 
 
 class DocumentFactory:
-    __embedder = Embedder
 
     def __init__(self):
         self.__user_id: int
+        self.__embedder: IEmbedder
         self._collection: EM.Collection
         # TODO: buffer in separate class
         self.__documents_buffer: list[BufferElement] = []
 
-    async def _ainit(self, __user_id):
+    async def _ainit(self, __user_id, __embedder):
         self._collection = await self.__get_collection(__user_id)
+        self.__embedder = __embedder
 
     async def __get_collection(self, __user_id: int):
         async with get_sessionmaker().begin() as db_session:
@@ -92,10 +72,15 @@ class DocumentFactory:
         self.__documents_buffer.append(BufferElement(document, status))
 
     async def __create_document(self, file_id: str, text: str, metadata: I.DocumentMetadata):
-        embedding = await self.__embedder.text_to_embedding(text)
-        document = I.Document(
-            file_id=file_id, embedding=embedding, metadata_=metadata)
-        self.__buffer_append(document, DocumentStatus.CREATE)
+        embeddings = await self.__embedder.text_to_embeddings(text)
+        print(f"BEFORE APPEND {self.__documents_buffer}")
+        print("IM HERE")
+        print(f"{len(embeddings)=}")
+        for embedding in embeddings:
+            document = I.Document(
+                file_id=file_id, text="A", embedding=embedding, metadata_=metadata)
+            self.__buffer_append(document, DocumentStatus.CREATE)
+        print(f"AFTER APPEND {self.__documents_buffer}")
 
     # async def generate_document_from_metadata(self, file_id: str, text: str, metadata: I.DocumentMetadata) -> I.Document:
     #     now = datetime.datetime.now()
@@ -142,6 +127,7 @@ class DocumentFactory:
         document = EM.Document()
         document.file_id = __document.file_id
         document.embedding = __document.embedding
+        document.text = __document.text
         metadata = EM.DocumentMetadata()
         document.metadata_ = metadata
 
@@ -177,18 +163,18 @@ class DocumentFactory:
 class UserCollection(DocumentFactory):
 
     @classmethod
-    async def from_user(cls, __user_id: int):
+    async def from_user(cls, __user_id: int, embedder: IEmbedder):
         self = cls()
         self.__user_id = __user_id
-        await super()._ainit(self, __user_id)
+        await super()._ainit(self, __user_id, embedder)
         return self
 
     @overload
-    async def add_document(self, __file_id: str, __text: str,
+    async def add_document(self, __file_id: str, __text: str, *,
                            metadata: I.DocumentMetadata): ...
 
     @overload
-    async def add_document(self, __file_id: str, __text: str, file_id: str, name: str,
+    async def add_document(self, __file_id: str, __text: str, *, file_id: str, name: str,
                            description: str, token_cost: int): ...
 
     async def add_document(self, *args, **kwargs):

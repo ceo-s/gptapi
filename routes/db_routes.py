@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from services.drive import GDrive
 from services.db import DBUser
 from services.db.embedding import UserCollection
+from services.llm.preprocessing import Embedder
 from db import interfaces as I
 
 router = APIRouter()
@@ -50,18 +51,22 @@ async def update_user_data(user_data: I.OUser):
 @router.get("/update-documents/")
 async def update_documents(user_id: int, username: str, document_text: str):
     print("IM HEREE!!!")
-    collection = await UserCollection.from_user(user_id)
+    collection = await UserCollection.from_user(user_id, Embedder(512, 64, optimizer="OverlapOptimizer"))
 
-    # await collection.add_document("1", "AAAA", metadata=I.DocumentMetadata(
-    #     name="govno", description="AAA", token_cost=10
-    # ))
+    metadata = I.DocumentMetadata(
+        name="govno", description="AAA", token_cost=10
+    )
+    with open("sample.txt") as file:
+        text = file.read()
+
+    await collection.add_document("1", text, metadata=metadata)
 
     # document = await collection.update_document("2")
     # document.metadata_.description = "TI BARAN"
     # async with collection.update_document("2") as document:
     #     document.metadata_.description = "Hi"
     #     document.metadata_.name = "Bye"
-    await collection.delete_document("1")
+    # await collection.delete_document("1")
     # await collection.delete_document("2")
     # await collection.delete_document("3")
     await collection.commit()

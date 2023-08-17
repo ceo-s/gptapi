@@ -18,6 +18,7 @@ class Document(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     file_id: Optional[str] = None
+    text: Optional[str] = None
     embedding: Optional[list[float]] = None
     metadata: Optional[DocumentMetadata] = Field(
         default=None, alias="metadata_")
