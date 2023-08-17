@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-from os import path
+from os import path, getenv
 from pprint import pp
 from typing import Literal
 
@@ -126,16 +126,17 @@ class GDrive:
     #     print(files)
     #     return files.get("files")
 
-    def register_event_handler(self, url: str, file_id: str = None) -> None:
-        if file_id is None:
-            file_id = self.BASEDIR_ID
+    def register_event_handler(self, url: str) -> None:
 
-        body = {'id': '1',
+        #token = self.service.changes().getStartPageToken().execute()
+        body = {'id': '4',
                 'type': 'web_hook',
-                'address': url}
+                'address': url,
+                }
+        #print("THIS IS YOUR FUCKING TOKEN BITCH", token)
 
-        # self.service.files().watch(fileId=file_id, body=body).execute()
-        self.service.changes().watch(body=body).execute()
+        self.service.files().watch(fileId='root', key=getenv("GDRIVE_API_KEY"), body=body).execute()
+        #self.service.changes().watch(body=body, pageToken=token["startPageToken"]).execute()
 
     # def check_updates(self):
     #     try:
