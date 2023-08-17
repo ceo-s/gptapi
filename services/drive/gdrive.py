@@ -118,27 +118,17 @@ class GDrive:
         print(files)
         return files.get("files")
 
-    # def register_event_handler(self, url: str, file_id: str = None) -> None:
-    #     if file_id is None:
-    #         file_id = self.BASEDIR_ID
-
-    #     body = {'id': '2',
-    #             'type': 'web_hook',
-    #             'address': url}
-
-    #     self.service.files().watch(fileId=file_id, body=body).execute()
-    #     self.service.changes().watch().execute()
-
-    # def register_event_handler(self, url: str, file_id: str = None) -> None:
-    #     if file_id is None:
-    #         file_id = self.BASEDIR_ID
-
-    #     body = {'id': '2',
-    #             'type': 'web_hook',
-    #             'address': url}
-
-    #     self.service.changes().watch(body=body).execute()
-
+             
+    def register_event_handler(self, url: str, file_id: str = None) -> None:
+        if file_id is None:
+            file_id = self.BASEDIR_ID
+         
+        body = {'id': '1',
+                'type': 'web_hook',
+                'address': url}
+         
+        self.service.files().watch(fileId=file_id, body=body).execute()
+             
     def check_updates(self):
         try:
             service = build('driveactivity', 'v2', credentials=self.creds)
@@ -211,7 +201,7 @@ class GDrivePoller:
         except HttpError as error:
             # TODO(developer) - Handle errors from drive API.
             print(f'An error occurred: {error}')
-
+ 
 
 def main():
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -14,6 +14,7 @@ class GDriveEvent(BaseModel):
 
 
 @router.post("/events/")
-async def event_handler(event: GDriveEvent):
-    print("HERE WE GO", event)
+async def event_handler(event: Request):
+    #print("HERE WE GO", event.__dict__)
+    print("HERE WE GO", event.headers)
     return "A"

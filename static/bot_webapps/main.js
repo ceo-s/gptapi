@@ -1,4 +1,4 @@
-export const baseUrl = "https://4657-188-243-182-231.ngrok-free.app";
+export const baseUrl = "https://babyfalcon.ru";
 
 export function initTg() {
   let tg = window.Telegram.WebApp;
