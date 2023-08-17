@@ -2,6 +2,7 @@ from __future__ import print_function
 
 from os import path
 from pprint import pp
+from typing import Literal
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request
@@ -18,23 +19,14 @@ class GDrive:
         'https://www.googleapis.com/auth/drive',
         'https://www.googleapis.com/auth/drive.activity',
     ]
-    BASEDIR_ID = "1f7o4aD60tka0ehhv4WuSaeQ-2Uy-mAN0"
 
     __CREDS = path.join("services", "drive", "credentials.json")
     __TOKEN = path.join("services", "drive", "token.json")
 
     def __init__(self) -> None:
         self.creds = self.__init_creds()
-        self.authorize()
+        self.__authorize()
         self.service = self.__init_service()
-
-    # @classmethod
-    # async def ainit(cls):
-    #     self = cls()
-    #     self.creds = self.__init_creds()
-    #     await self.authorize()
-    #     self.service = self.__init_service()
-    #     return self
 
     def __del__(self):
         print("Deleting", self.__dict__)
@@ -53,7 +45,7 @@ class GDrive:
         service = build('drive', 'v3', credentials=self.creds)
         return service
 
-    def authorize(self):
+    def __authorize(self):
         creds = self.creds
         assert creds is self.creds
         if not creds or not creds.valid:
@@ -67,12 +59,24 @@ class GDrive:
             with open(self.__TOKEN, 'w') as token:
                 token.write(creds.to_json())
 
-    def get_basedir(self):
+    def share_dir(self, dir_id: str, permissions: Literal["owner", "organizer", "fileOrganizer", "writer", "commenter", "reader"]):
+        permission = {
+            'type': 'anyone',
+            'role': permissions,
+        }
         try:
-            basedir = self.service.files().get(fileId=self.BASEDIR_ID).execute()
-            print("BASEDIR", basedir)
+            self.service.permissions().create(
+                fileId=dir_id, body=permission, fields='id').execute()
+        except HttpError as error:
+            # TODO(developer) - Handle errors from drive API.
+            print(f'An error occurred: {error}')
+
+    def listdir(self, dir_id: str):
+        try:
+            # basedir = self.service.files().get(fileId=self.BASEDIR_ID).execute()
+            # print("BASEDIR", basedir)
             folders = self.service.files().list(
-                q=f"'{self.BASEDIR_ID}' in parents").execute()
+                q=f"'{dir_id}' in parents").execute()
 
             print(folders)
 
@@ -81,17 +85,21 @@ class GDrive:
             print(f'An error occurred: {error}')
 
     def mkdir(self, name: str, parent_folder: str = None):
-        if parent_folder is None:
-            parent_folder = self.BASEDIR_ID
         metadata = {'name': name,
                     'mimeType': 'application/vnd.google-apps.folder',
-                    'parents': [parent_folder]}
+                    'type': 'anyone',
+                    'role': 'writer',
+                    }
+        if parent_folder is not None:
+            metadata["parents"] = [parent_folder]
+
         try:
-            file = self.service.files().create(body=metadata, fields="id").execute()
+            file = self.service.files().create(body=metadata, fields="id",
+                                               supportsAllDrives=True).execute()
 
         except HttpError as error:
             print(f'An error occurred: {error}')
-
+        print(f"{file=}")
         return file.get("id")
 
     def __get_dir_id(self, dirname: str):
@@ -106,102 +114,43 @@ class GDrive:
 
         return file.get("id")
 
-    def listdir(self, dirname: str):
-        dir_id = self.__get_dir_id(dirname)
-        try:
-            files = self.service.files().list(
-                q=f"'{dir_id}' in parents").execute()
+    # def listdir(self, dirname: str):
+    #     dir_id = self.__get_dir_id(dirname)
+    #     try:
+    #         files = self.service.files().list(
+    #             q=f"'{dir_id}' in parents").execute()
 
-        except HttpError as error:
-            print(f'An error occurred: {error}')
+    #     except HttpError as error:
+    #         print(f'An error occurred: {error}')
 
-        print(files)
-        return files.get("files")
+    #     print(files)
+    #     return files.get("files")
 
-             
     def register_event_handler(self, url: str, file_id: str = None) -> None:
         if file_id is None:
             file_id = self.BASEDIR_ID
-         
+
         body = {'id': '1',
                 'type': 'web_hook',
                 'address': url}
-         
-        self.service.files().watch(fileId=file_id, body=body).execute()
-             
-    def check_updates(self):
-        try:
-            service = build('driveactivity', 'v2', credentials=self.creds)
-            results = service.activity().query(body={
-                'pageSize': 10
-            }).execute()
-            print("LEN ACTIVITIES")
-            print(len(results["activities"]))
-            print("LAST UPDATE")
-            pp(results["activities"][0])
 
-        except HttpError as error:
-            print(f'An error occurred: {error}')
+        # self.service.files().watch(fileId=file_id, body=body).execute()
+        self.service.changes().watch(body=body).execute()
 
+    # def check_updates(self):
+    #     try:
+    #         service = build('driveactivity', 'v2', credentials=self.creds)
+    #         results = service.activity().query(body={
+    #             'pageSize': 10
+    #         }).execute()
+    #         print("LEN ACTIVITIES")
+    #         print(len(results["activities"]))
+    #         print("LAST UPDATE")
+    #         pp(results["activities"][0])
 
-class GDrivePoller:
-    SCOPES = [
-        'https://www.googleapis.com/auth/drive'
-    ]
-    BASEDIR_ID = "1f7o4aD60tka0ehhv4WuSaeQ-2Uy-mAN0"
+    #     except HttpError as error:
+    #         print(f'An error occurred: {error}')
 
-    __CREDS = path.join("services", "drive", "credentials.json")
-    __TOKEN = path.join("services", "drive", "token.json")
-
-    def __init__(self) -> None:
-        self.creds = self.__init_creds()
-        self.authorize()
-        self.service = self.__init_service()
-
-    def __del__(self):
-        print("Deleting", self.__dict__)
-        ...
-
-    @classmethod
-    def __init_creds(cls) -> Credentials:
-        creds = None
-
-        if path.exists(cls.__TOKEN):
-            creds = Credentials.from_authorized_user_file(
-                cls.__TOKEN, cls.SCOPES)
-        return creds
-
-    def __init_service(self) -> Resource:
-        service = build('drive', 'v3', credentials=self.creds)
-        return service
-
-    def authorize(self):
-        creds = self.creds
-        assert creds is self.creds
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.__CREDS, self.SCOPES)
-                creds = flow.run_local_server(port=8080)
-
-            with open(self.__TOKEN, 'w') as token:
-                token.write(creds.to_json())
-
-    def get_basedir(self):
-        try:
-            basedir = self.service.files().get(fileId=self.BASEDIR_ID).execute()
-            print("BASEDIR", basedir)
-            folders = self.service.files().list(
-                q=f"'{self.BASEDIR_ID}' in parents").execute()
-
-            print(folders)
-
-        except HttpError as error:
-            # TODO(developer) - Handle errors from drive API.
-            print(f'An error occurred: {error}')
- 
 
 def main():
 

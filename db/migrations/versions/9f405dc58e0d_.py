@@ -1,8 +1,8 @@
 """
 
-Revision ID: 966888132bfd
+Revision ID: 9f405dc58e0d
 Revises: 
-Create Date: 2023-08-17 02:24:16.536031
+Create Date: 2023-08-17 23:46:32.584831
 
 """
 from typing import Sequence, Union
@@ -11,9 +11,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from pgvector.sqlalchemy import Vector
-
 # revision identifiers, used by Alembic.
-revision: str = '966888132bfd'
+revision: str = '9f405dc58e0d'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,6 +27,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('collection',
+    sa.Column('dir_id', sa.String(), nullable=False),
     sa.Column('user_fk', sa.BigInteger(), nullable=False),
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.ForeignKeyConstraint(['user_fk'], ['user.id'], ondelete='CASCADE'),

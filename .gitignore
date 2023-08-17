@@ -1,7 +1,7 @@
 .vscode
 .env
 alembic.ini
-test.py
+test*.py
 **/__pycache__
 db/embeddings/*
 **/credentials.json

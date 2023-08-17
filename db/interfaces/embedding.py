@@ -1,7 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 from datetime import datetime
-from .user import User
 
 
 class DocumentMetadata(BaseModel):
@@ -33,5 +32,7 @@ class Document(BaseModel):
 class Collection(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user: Optional[User] = None
+    dir_id: Optional[str] = None
     documents: Optional[list[Document]] = None
+    # BUG: if something gone wrong, remember, you removed dis shit
+    # user: Optional[User] = None

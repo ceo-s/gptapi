@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from functools import wraps
 from typing import Optional
+from .embedding import Collection
 
 
 class Settings(BaseModel):
@@ -29,6 +30,7 @@ class BaseUser(BaseModel):
 
 class User(BaseUser):
     settings: Optional[OSettings] = None
+    collection: Optional[Collection] = None
 
 
 class OUser(BaseModel):
@@ -36,6 +38,7 @@ class OUser(BaseModel):
     username: Optional[str] = None
     first_name: Optional[str] = None
     settings: Optional[OSettings] = None
+    collection: Optional[Collection] = None
 
 
 class UserQuery(BaseModel):

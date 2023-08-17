@@ -42,9 +42,14 @@ class DBUser(IUser):
 
     def dict(self):
         res = self.__user.__dict__
-        res.pop("_sa_instance_state")
-        res.pop("collection")
+
         res["settings"] = res["settings"].__dict__
+        res['collection'] = res['collection'].__dict__
+
+        res.pop("_sa_instance_state")
+        res["settings"].pop("_sa_instance_state")
+        res['collection'].pop("_sa_instance_state")
+
         return res
 
     async def __get(self) -> UM.User | None:
@@ -60,7 +65,7 @@ class DBUser(IUser):
             db_session.expunge_all()
             return user
 
-    async def create(self, username: str, first_name: str) -> None:
+    async def create(self, username: str, first_name: str, drive_dir_id: str) -> None:
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
 
@@ -78,6 +83,7 @@ class DBUser(IUser):
             )
 
             collection = EM.Collection(
+                dir_id=drive_dir_id,
                 documents=[],
             )
 

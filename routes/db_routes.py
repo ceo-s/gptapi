@@ -15,8 +15,11 @@ async def authenticate_user(user_data: I.User):
     user = await DBUser.from_id(user_data.id)
 
     if not user:
-        await user.create(user_data.username, user_data.first_name)
-        GDrive().mkdir(user_data.username)
+        drive = GDrive()
+        dir_id = drive.mkdir(user_data.username)
+        drive.share_dir(dir_id, 'writer')
+
+        await user.create(user_data.username, user_data.first_name, dir_id)
         return {"authenticated": False}
 
     return {"authenticated": True}

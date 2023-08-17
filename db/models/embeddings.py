@@ -12,6 +12,7 @@ OPENAI_EMBEDDING_SIZE = 1536
 
 
 class Collection(M.AutoIncrement, M.ClassNamed, BASE):
+    dir_id: Mapped[str] = mapped_column()
     documents: Mapped[list["Document"]] = relationship(
         back_populates="collection",
         cascade="all, delete-orphan",
