@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import requests
 from os import path, getenv
 from pprint import pp
 from typing import Literal
@@ -126,17 +127,47 @@ class GDrive:
     #     print(files)
     #     return files.get("files")
 
+#    def register_event_handler(self, url: str) -> None:
+#        headers = {
+#                'Authorization': f'Bearer {self.creds.token}',
+#                'Accept': 'application/json',
+#                  }
+#        body = {
+#                'id': '5',
+#                'type': 'web_hook',
+#                'address': f'{url}',
+#               }
+#        
+#        key = getenv("GDRIVE_API_KEY")
+#        params = {"key": key}
+#        print("KEY", key)
+#        response = requests.post('https://www.googleapis.com/drive/v3/files/root/watch', params=params, headers=headers, json=body)
+#        print(self.creds.__dict__)
+#        print(self.creds.token)
+#        print(response)
+#        print(response.status_code)
+#        print(response.json())
+#        resp_headers = response.headers
+#        dct_key = "resourceUri"
+#        print("URI", resp_headers.get(dct_key))
+
+
+
+
+
     def register_event_handler(self, url: str) -> None:
 
-        #token = self.service.changes().getStartPageToken().execute()
-        body = {'id': '4',
+        token = self.service.changes().getStartPageToken().execute()
+        body = {'id': '6',
                 'type': 'web_hook',
                 'address': url,
                 }
         #print("THIS IS YOUR FUCKING TOKEN BITCH", token)
+        key = getenv("GDRIVE_API_KEY")
+        print("KEY", key)
 
-        self.service.files().watch(fileId='root', key=getenv("GDRIVE_API_KEY"), body=body).execute()
-        #self.service.changes().watch(body=body, pageToken=token["startPageToken"]).execute()
+        #self.service.files().watch(fileId='root', key=key, body=body).execute()
+        self.service.changes().watch(body=body, pageToken=token["startPageToken"]).execute()
 
     # def check_updates(self):
     #     try:
