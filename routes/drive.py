@@ -1,37 +1,13 @@
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
-import requests
-from services.drive.gdrive import GDrive
+from services.drive import GDriveEventsManager
 from os import getenv
 
 router = APIRouter()
 
 
-class GDriveEvent(BaseModel):
-    kind: str
-    id: str
-    resourceId: str
-    resourceUri: str
-    token: str
-    expiration: str
-
-
 @router.post("/events/")
 async def event_handler(event: Request):
-    #print("HERE WE GO", event.__dict__)
-    if event.headers.get("x-goog-channel-id") in ('1', '2', '6'):
-        return {}
-    print("HERE WE GO", event.headers)
-    print(uri:=event.headers.get("x-goog-resource-uri"))
-    creds = GDrive().creds
-    headers = {
-                'Authorization': f'Bearer {creds.token}',
-                'Accept': 'application/json',
-              }
-    key = getenv("GDRIVE_API_KEY")
-    params = {"key": key}
-    resp = requests.get(uri, params=params, headers=headers)
-    print(resp)
-    print(resp.json())
-    print("HERE WE GO, BODY", await event.body())
+    print("I am in event_handler router", f"{event.__dict__=}")
+    drive_manager = GDriveEventsManager()
+    drive_manager.HANDLER.handle_event(headers=event.headers)
     return "A"

@@ -1,1 +1,1 @@
-from .gdrive import GDrive
+from .gdrive import GDrive, GDriveEventsManager

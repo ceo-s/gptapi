@@ -1,9 +1,10 @@
 from __future__ import print_function
 
-import requests
 from os import path, getenv
-from pprint import pp
-from typing import Literal
+from typing import Literal, Self
+from uuid import uuid4
+from enum import Enum
+from asyncio import sleep
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request
@@ -14,8 +15,7 @@ from googleapiclient.errors import HttpError
 # If modifying these scopes, delete the file token.json.
 
 
-class GDrive:
-
+class GDriveAuth:
     SCOPES = [
         'https://www.googleapis.com/auth/drive',
         'https://www.googleapis.com/auth/drive.activity',
@@ -25,13 +25,9 @@ class GDrive:
     __TOKEN = path.join("services", "drive", "token.json")
 
     def __init__(self) -> None:
-        self.creds = self.__init_creds()
+        self._creds = self.__init_creds()
         self.__authorize()
-        self.service = self.__init_service()
-
-    def __del__(self):
-        print("Deleting", self.__dict__)
-        ...
+        self._service = self.__init_service()
 
     @classmethod
     def __init_creds(cls) -> Credentials:
@@ -43,12 +39,12 @@ class GDrive:
         return creds
 
     def __init_service(self) -> Resource:
-        service = build('drive', 'v3', credentials=self.creds)
+        service = build('drive', 'v3', credentials=self._creds)
         return service
 
     def __authorize(self):
-        creds = self.creds
-        assert creds is self.creds
+        creds = self._creds
+        assert creds is self._creds
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
@@ -60,30 +56,31 @@ class GDrive:
             with open(self.__TOKEN, 'w') as token:
                 token.write(creds.to_json())
 
+
+class GDrive(GDriveAuth):
+
     def share_dir(self, dir_id: str, permissions: Literal["owner", "organizer", "fileOrganizer", "writer", "commenter", "reader"]):
         permission = {
             'type': 'anyone',
             'role': permissions,
         }
         try:
-            self.service.permissions().create(
+            self._service.permissions().create(
                 fileId=dir_id, body=permission, fields='id').execute()
         except HttpError as error:
-            # TODO(developer) - Handle errors from drive API.
             print(f'An error occurred: {error}')
 
     def listdir(self, dir_id: str):
         try:
-            # basedir = self.service.files().get(fileId=self.BASEDIR_ID).execute()
-            # print("BASEDIR", basedir)
-            folders = self.service.files().list(
+            files = self._service.files().list(
                 q=f"'{dir_id}' in parents").execute()
 
-            print(folders)
+            print(files)
 
         except HttpError as error:
-            # TODO(developer) - Handle errors from drive API.
             print(f'An error occurred: {error}')
+
+        return files
 
     def mkdir(self, name: str, parent_folder: str = None):
         metadata = {'name': name,
@@ -95,17 +92,17 @@ class GDrive:
             metadata["parents"] = [parent_folder]
 
         try:
-            file = self.service.files().create(body=metadata, fields="id",
-                                               supportsAllDrives=True).execute()
+            file = self._service.files().create(body=metadata, fields="id",
+                                                supportsAllDrives=True).execute()
 
         except HttpError as error:
             print(f'An error occurred: {error}')
-        print(f"{file=}")
+
         return file.get("id")
 
     def __get_dir_id(self, dirname: str):
         try:
-            folder = self.service.files().list(
+            folder = self._service.files().list(
                 q=f"'{self.BASEDIR_ID}' in parents and name = '{dirname}'").execute()
             print("THIS IS FOLDER", folder)
         except HttpError as error:
@@ -115,71 +112,98 @@ class GDrive:
 
         return file.get("id")
 
-    # def listdir(self, dirname: str):
-    #     dir_id = self.__get_dir_id(dirname)
-    #     try:
-    #         files = self.service.files().list(
-    #             q=f"'{dir_id}' in parents").execute()
-
-    #     except HttpError as error:
-    #         print(f'An error occurred: {error}')
-
-    #     print(files)
-    #     return files.get("files")
-
-#    def register_event_handler(self, url: str) -> None:
-#        headers = {
-#                'Authorization': f'Bearer {self.creds.token}',
-#                'Accept': 'application/json',
-#                  }
-#        body = {
-#                'id': '5',
-#                'type': 'web_hook',
-#                'address': f'{url}',
-#               }
-#        
-#        key = getenv("GDRIVE_API_KEY")
-#        params = {"key": key}
-#        print("KEY", key)
-#        response = requests.post('https://www.googleapis.com/drive/v3/files/root/watch', params=params, headers=headers, json=body)
-#        print(self.creds.__dict__)
-#        print(self.creds.token)
-#        print(response)
-#        print(response.status_code)
-#        print(response.json())
-#        resp_headers = response.headers
-#        dct_key = "resourceUri"
-#        print("URI", resp_headers.get(dct_key))
-
-
-
-
-
     def register_event_handler(self, url: str) -> None:
 
-        token = self.service.changes().getStartPageToken().execute()
         body = {
-                'id': '5',
-                'type': 'web_hook',
-                'address': url,
-                }
+            'id': '5',
+            'type': 'web_hook',
+            'address': url,
+            'expiration': 604_800_000
+        }
 
-        self.service.files().watch(fileId='1BEq3UQKUC8LueT5xIxZLBKdGKq9aMQJe', body=body).execute()
-        #self.service.changes().watch(body=body, pageToken=token["startPageToken"]).execute()
+        self._service.files().watch(
+            fileId='1BEq3UQKUC8LueT5xIxZLBKdGKq9aMQJe', body=body).execute()
 
-    # def check_updates(self):
-    #     try:
-    #         service = build('driveactivity', 'v2', credentials=self.creds)
-    #         results = service.activity().query(body={
-    #             'pageSize': 10
-    #         }).execute()
-    #         print("LEN ACTIVITIES")
-    #         print(len(results["activities"]))
-    #         print("LAST UPDATE")
-    #         pp(results["activities"][0])
 
-    #     except HttpError as error:
-    #         print(f'An error occurred: {error}')
+class GDriveEventsPoller:
+    __SELF = None
+    __DRIVE = GDrive
+
+    def __new__(cls) -> Self:
+        if cls.__SELF is not None:
+            return cls.__SELF
+        return cls()
+
+    def __init__(self) -> None:
+        self.hanler_address = "https://babyfalcon.ru/drive/events/"
+        self.start_page_token = self.__init_start_page_token()
+        self.__channel = {}
+
+    async def start_polling(self):
+
+        while True:
+            self.register_event_handler()
+            await sleep(self.__channel["expiration"])
+
+    def delete_channel(self):
+        self.__DRIVE()._service.channels().stop(body=self.__channel)
+
+    def __init_start_page_token(self):
+        token = self.__DRIVE()._service.changes().getStartPageToken().execute()
+        return token["startPageToken"]
+
+    def register_event_handler(self) -> None:
+        drive = self.__DRIVE()
+        body = {
+            'id': uuid4(),
+            'type': 'web_hook',
+            'expiration': 604_800_000,
+            'pageToken': self.start_page_token,
+            'address': self.hanler_address,
+        }
+
+        self.__channel = drive._service.changes().watch(body=body).execute()
+
+
+class GDriveEventsHandler:
+
+    __DRIVE = GDrive
+
+    class GoogleEventHeaders(Enum):
+        Channel_ID = "X-Goog-Channel-ID"
+        Channel_Token = "X-Goog-Channel-Token"
+        Channel_Expiration = "X-Goog-Channel-Expiration"
+        Resource_ID = "X-Goog-Resource-ID"
+        Resource_URI = "X-Goog-Resource-URI"
+        Resource_State = "X-Goog-Resource-State"
+        Changed = "X-Goog-Changed"
+        Message_Number = "X-Goog-Message-Number"
+
+    class ResourceStates(Enum):
+        SYNC = "sync"
+        ADD = "add"
+        REMOVE = "remove"
+        UPDATE = "update"
+        TRASH = "trash"
+        UNTRASH = "untrash"
+        CHANGE = "change"
+
+    class UpdateType(Enum):
+        CONTENT = "content"
+        PROPERTIES = "properties"
+        PARENTS = "parents"
+        CHILDREN = "children"
+        PERMISSIONS = "permissions"
+
+    def handle_event(self, headers: dict):
+        print(headers)
+
+
+class GDriveEventsManager:
+
+    def __init__(self) -> None:
+        self.POLLER = GDriveEventsPoller()
+        self.HANDLER = GDriveEventsHandler()
 
 
 def main():

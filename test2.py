@@ -1,47 +1,25 @@
-from db.interfaces import Document
-from abc import ABC
+from time import sleep
+from threading import Thread
 
 
-class _User:
+class Eblan:
 
-    def __init__(self, *args, **kwargs):
-        self._arg = args[0]
+    def __init__(self) -> None:
+        self.a = [1, 2, 3, 4, 5]
 
-    def _update(self):
-        print("UPDATING")
+    def start_polling(self):
+        print("starting to poll")
+        sleep(10)
 
+    def do_it(self):
+        print("Doing it", self.a)
 
-class _UserUpdateContextManager:
-
-    def __enter__(self):
-        print("ENTERING")
-        self._update()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        ...
+    def __del__(self):
+        self.do_it()
 
 
-class User(_UserUpdateContextManager, _User):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def update(self):
-        return self
-
-
-usr = User(1)
-
-with usr.update() as upd:
-    print(f"{upd=}")
-    print("A")
-
-
-# class IUser(ABC):
-#     id: int = None
-#     username: str
-#     first_name: str
-
-
-# for attr, value in vars(IUser)["__annotations__"].items():
-#     print(f"{attr=} {value=}")
+eb = Eblan()
+# eb.start_polling()
+thr = Thread(target=eb.start_polling).start()
+for i in range(10):
+    print(i)
