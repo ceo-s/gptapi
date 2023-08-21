@@ -158,16 +158,14 @@ class GDrive:
     def register_event_handler(self, url: str) -> None:
 
         token = self.service.changes().getStartPageToken().execute()
-        body = {'id': '6',
+        body = {
+                'id': '5',
                 'type': 'web_hook',
                 'address': url,
                 }
-        #print("THIS IS YOUR FUCKING TOKEN BITCH", token)
-        key = getenv("GDRIVE_API_KEY")
-        print("KEY", key)
 
-        #self.service.files().watch(fileId='root', key=key, body=body).execute()
-        self.service.changes().watch(body=body, pageToken=token["startPageToken"]).execute()
+        self.service.files().watch(fileId='1BEq3UQKUC8LueT5xIxZLBKdGKq9aMQJe', body=body).execute()
+        #self.service.changes().watch(body=body, pageToken=token["startPageToken"]).execute()
 
     # def check_updates(self):
     #     try:

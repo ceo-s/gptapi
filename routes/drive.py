@@ -19,6 +19,8 @@ class GDriveEvent(BaseModel):
 @router.post("/events/")
 async def event_handler(event: Request):
     #print("HERE WE GO", event.__dict__)
+    if event.headers.get("x-goog-channel-id") in ('1', '2', '6'):
+        return {}
     print("HERE WE GO", event.headers)
     print(uri:=event.headers.get("x-goog-resource-uri"))
     creds = GDrive().creds
