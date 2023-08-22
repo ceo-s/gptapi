@@ -9,7 +9,7 @@ from datetime import timedelta, datetime
 from google.protobuf import duration_pb2
 
 # from google.auth.transport._aiohttp_requests import Request
-from google.auth.transport.requests import Request
+from google.auth.transport.requests import Request, AuthorizedSession
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
@@ -114,18 +114,6 @@ class GDrive(GDriveAuth):
 
         return file.get("id")
 
-    def register_event_handler(self, url: str) -> None:
-
-        body = {
-            'id': '5',
-            'type': 'web_hook',
-            'address': url,
-            'expiration': 604_800_000
-        }
-
-        self._service.files().watch(
-            fileId='1BEq3UQKUC8LueT5xIxZLBKdGKq9aMQJe', body=body).execute()
-
 
 class GDriveEventsPoller:
     __SELF = None
@@ -143,8 +131,8 @@ class GDriveEventsPoller:
 
     async def start_polling(self):
 
-#        while True:
-         self.register_event_handler()
+        # while True:
+        self.register_event_handler()
 #            await sleep(timedelta(weeks=1).total_seconds())
 
     def delete_channel(self):
@@ -164,7 +152,8 @@ class GDriveEventsPoller:
             'address': self.hanler_address,
         }
 
-        self.__channel = drive._service.changes().watch(pageToken=self.start_page_token, body=body).execute()
+        self.__channel = drive._service.changes().watch(
+            pageToken=self.start_page_token, body=body).execute()
 
 #    def get_expiration_time(self):
 #        ttl = duration_pb2.Duration()
@@ -175,11 +164,12 @@ class GDriveEventsPoller:
         datetime_expiration = datetime.now() + timedelta(weeks=1)
         return int(datetime.timestamp(datetime_expiration)*1000)
 
+
 class GDriveEventsHandler:
 
     __DRIVE = GDrive
 
-    class GoogleEventHeaders(Enum):
+    class Headers(Enum):
         Channel_ID = "X-Goog-Channel-ID"
         Channel_Token = "X-Goog-Channel-Token"
         Channel_Expiration = "X-Goog-Channel-Expiration"
@@ -206,7 +196,15 @@ class GDriveEventsHandler:
         PERMISSIONS = "permissions"
 
     def handle_event(self, headers: dict):
-        print(headers)
+
+        if headers[self.Headers.Resource_State.value] == self.ResourceStates.SYNC.value:
+            return
+        session = AuthorizedSession(self.__DRIVE()._creds)
+        resp = session.get(headers[self.Headers.Resource_URI.value])
+        print(resp.json())
+        print(resp.json()["changes"])
+        print(len(resp.json()["changes"]))
+        print("Last change -->", resp.json()["changes"][0])
 
 
 class GDriveEventsManager:
