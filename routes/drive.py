@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from services.drive import GDriveEventsManager
 from os import getenv
-from asyncio import CancelledError
+from asyncio import CancelledError, create_task
 
 router = APIRouter()
 
@@ -10,10 +10,7 @@ router = APIRouter()
 async def event_handler(event: Request):
     # print("I am in event_handler router", f"{event.__dict__=}")
     drive_manager = GDriveEventsManager()
-    try:
-        await drive_manager.HANDLER.handle_event(headers=event.headers)
+    task = create_task(drive_manager.HANDLER.handle_event(headers=event.headers))
 
-    except CancelledError:
-        print("Debounce did its stuff right here nigga")
-
+    print("SENDING A RESPONSE")
     return "A"

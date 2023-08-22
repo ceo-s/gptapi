@@ -199,24 +199,34 @@ class GDriveEventsHandler:
         PERMISSIONS = "permissions"
 
     def __new__(cls) -> Self:
-        if cls.__SELF is not None:
-            return cls.__SELF
-        return super().__new__(cls)
+        print("I am in new method and this is __SELF=", cls.__SELF)
+        if cls.__SELF is None:
+            cls.__SELF = super().__new__(cls)
+            cls.__SELF.__task: asyncio.Task | None = None
+            cls.__SELF.__resource_uris = set()
+        return cls.__SELF
 
     def __init__(self) -> None:
-        self.__task: asyncio.Task | None = None
-        self.__resource_uris = set()
+        print(f"\033[93mI am in init of so called singelton{id(self)}\033[0m")
 
     def __process_event(self):
+        print("\033[93mstart to proceed\033[0m")
         drive = self.__DRIVE()
         session = AuthorizedSession(drive._creds)
         changes: list[dict] = []
-        fields = ["file.kind", "file.mimeType", "file.id", "file.name", "file.description",
-                  "file.trashed", "file.parents", "file.fileExtension", "file.webContentLink"]
+        # fields = ["kind", "mimeType", "id", "name", "description",
+        #          "trashed", "parents", "fileExtension", "webContentLink"]
+        # fields = [f"file.{field}" for field in fields]
+        # fields = f"changes(file({','.join(fields)}))"
+        
+        fields = f'nextPageToken,newStartPageToken,changes(fileId,kind,removed,file(name,mimeType,parents,id,description,trashed,webContentLink,fileExtension))'
+        # fields = f'nextPageToken,newStartPageToken,changes(fileId,kind,removed,file(name,mimeType,parents,id))'
 
         for uri in self.__resource_uris:
-            resp = session.get(f"{uri}?fields={','.join(fields)}")
-            changes += resp["changes"]
+            print(f"{uri}&fields={fields}")
+            resp = session.get(f"{uri}&fields={fields}")
+            print(f"{resp.json()=}")
+            changes += resp.json()["changes"]
 
         print(f"{changes=}")
 
@@ -242,7 +252,8 @@ class GDriveEventsHandler:
     # 'https://www.googleapis.com/drive/v3/changes?alt=json&pageToken=232'
 
     async def __handle_event(self):
-        await asyncio.sleep(30)
+        print("in __handle_event")
+        await asyncio.sleep(10)
         self.__process_event()
 
     async def handle_event(self, headers: dict):
@@ -251,10 +262,12 @@ class GDriveEventsHandler:
             return
 
         if self.__task is not None:
+            print("\033[93mCanceling task\033[0m")
             self.__task.cancel()
+
         self.__task = asyncio.create_task(self.__handle_event())
         self.__resource_uris.add(headers[self.Headers.Resource_URI.value])
-
+        print("Awaiting task", headers[self.Headers.Channel_ID.value])
         await self.__task
 
 
