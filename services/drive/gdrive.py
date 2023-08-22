@@ -201,10 +201,13 @@ class GDriveEventsHandler:
             return
         session = AuthorizedSession(self.__DRIVE()._creds)
         resp = session.get(headers[self.Headers.Resource_URI.value])
+        print(headers) 
         print(resp.json())
-        print(resp.json()["changes"])
         print(len(resp.json()["changes"]))
-        print("Last change -->", resp.json()["changes"][0])
+        last = resp.json()["changes"][-1]
+        print("Last change -->", last)
+        resp2 = session.get(f"https://www.googleapis.com/drive/v3/files/{last['file']['id']}?fields=*")
+        print(resp2.json())
 
 
 class GDriveEventsManager:
