@@ -5,6 +5,8 @@ from typing import Literal, Self
 from uuid import uuid4
 from enum import Enum
 from asyncio import sleep
+from datetime import timedelta, datetime
+from google.protobuf import duration_pb2
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request
@@ -132,7 +134,7 @@ class GDriveEventsPoller:
     def __new__(cls) -> Self:
         if cls.__SELF is not None:
             return cls.__SELF
-        return cls()
+        return super().__new__(cls)
 
     def __init__(self) -> None:
         self.hanler_address = "https://babyfalcon.ru/drive/events/"
@@ -141,12 +143,13 @@ class GDriveEventsPoller:
 
     async def start_polling(self):
 
-        while True:
-            self.register_event_handler()
-            await sleep(self.__channel["expiration"])
+#        while True:
+         self.register_event_handler()
+#            await sleep(timedelta(weeks=1).total_seconds())
 
     def delete_channel(self):
-        self.__DRIVE()._service.channels().stop(body=self.__channel)
+        print("deleting channel", self.__channel)
+        self.__DRIVE()._service.channels().stop(body=self.__channel).execute()
 
     def __init_start_page_token(self):
         token = self.__DRIVE()._service.changes().getStartPageToken().execute()
@@ -155,15 +158,22 @@ class GDriveEventsPoller:
     def register_event_handler(self) -> None:
         drive = self.__DRIVE()
         body = {
-            'id': uuid4(),
+            'id': str(uuid4()),
             'type': 'web_hook',
-            'expiration': 604_800_000,
-            'pageToken': self.start_page_token,
+            'expiration': self.get_expiration_time(),
             'address': self.hanler_address,
         }
 
-        self.__channel = drive._service.changes().watch(body=body).execute()
+        self.__channel = drive._service.changes().watch(pageToken=self.start_page_token, body=body).execute()
 
+#    def get_expiration_time(self):
+#        ttl = duration_pb2.Duration()
+#        ttl.seconds = int(timedelta(weeks=1).total_seconds())
+#        return ttl
+
+    def get_expiration_time(self):
+        datetime_expiration = datetime.now() + timedelta(weeks=1)
+        return int(datetime.timestamp(datetime_expiration)*1000)
 
 class GDriveEventsHandler:
 
