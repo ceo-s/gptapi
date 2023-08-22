@@ -1,12 +1,12 @@
 from __future__ import print_function
 
 from os import path, getenv
-from typing import Literal, Self
+from typing import Any, Literal, Self
 from uuid import uuid4
 from enum import Enum
-from asyncio import sleep
+import asyncio
 from datetime import timedelta, datetime
-from google.protobuf import duration_pb2
+from functools import wraps
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request, AuthorizedSession
@@ -18,6 +18,7 @@ from googleapiclient.errors import HttpError
 
 
 class GDriveAuth:
+
     SCOPES = [
         'https://www.googleapis.com/auth/drive',
         'https://www.googleapis.com/auth/drive.activity',
@@ -116,7 +117,8 @@ class GDrive(GDriveAuth):
 
 
 class GDriveEventsPoller:
-    __SELF = None
+
+    __SELF: "GDriveEventsPoller" = None
     __DRIVE = GDrive
 
     def __new__(cls) -> Self:
@@ -167,6 +169,7 @@ class GDriveEventsPoller:
 
 class GDriveEventsHandler:
 
+    __SELF: "GDriveEventsHandler" = None
     __DRIVE = GDrive
 
     class Headers(Enum):
@@ -195,19 +198,64 @@ class GDriveEventsHandler:
         CHILDREN = "children"
         PERMISSIONS = "permissions"
 
-    def handle_event(self, headers: dict):
+    def __new__(cls) -> Self:
+        if cls.__SELF is not None:
+            return cls.__SELF
+        return super().__new__(cls)
+
+    def __init__(self) -> None:
+        self.__task: asyncio.Task | None = None
+        self.__resource_uris = set()
+
+    def __process_event(self):
+        drive = self.__DRIVE()
+        session = AuthorizedSession(drive._creds)
+        changes: list[dict] = []
+        fields = ["file.kind", "file.mimeType", "file.id", "file.name", "file.description",
+                  "file.trashed", "file.parents", "file.fileExtension", "file.webContentLink"]
+
+        for uri in self.__resource_uris:
+            resp = session.get(f"{uri}?fields={','.join(fields)}")
+            changes += resp["changes"]
+
+        print(f"{changes=}")
+
+    # def __process_event(self, headers: dict):
+
+    #     if headers[self.Headers.Resource_State.value] == self.ResourceStates.SYNC.value:
+    #         return
+    #     drive = self.__DRIVE()
+    #     session = AuthorizedSession(drive._creds)
+    #     resp = session.get(headers[self.Headers.Resource_URI.value])
+    #     print(headers)
+    #     print(resp.json())
+    #     print(len(resp.json()["changes"]))
+    #     last = resp.json()["changes"][-1]
+    #     print("Last change -->", last)
+    #     fields = 'kind,id,name,mimeType,description,trashed,parents'
+    #     fields = '*'
+    #     resp2 = session.get(
+    #         f"https://www.googleapis.com/drive/v3/files/{last['file']['id']}?fields={fields}")
+
+    #     print(resp2.json())
+    # 'https://www.googleapis.com/drive/v3/changes?alt=json&pageToken=232'
+    # 'https://www.googleapis.com/drive/v3/changes?alt=json&pageToken=232'
+
+    async def __handle_event(self):
+        await asyncio.sleep(30)
+        self.__process_event()
+
+    async def handle_event(self, headers: dict):
 
         if headers[self.Headers.Resource_State.value] == self.ResourceStates.SYNC.value:
             return
-        session = AuthorizedSession(self.__DRIVE()._creds)
-        resp = session.get(headers[self.Headers.Resource_URI.value])
-        print(headers) 
-        print(resp.json())
-        print(len(resp.json()["changes"]))
-        last = resp.json()["changes"][-1]
-        print("Last change -->", last)
-        resp2 = session.get(f"https://www.googleapis.com/drive/v3/files/{last['file']['id']}?fields=*")
-        print(resp2.json())
+
+        if self.__task is not None:
+            self.__task.cancel()
+        self.__task = asyncio.create_task(self.__handle_event())
+        self.__resource_uris.add(headers[self.Headers.Resource_URI.value])
+
+        await self.__task
 
 
 class GDriveEventsManager:
