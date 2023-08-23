@@ -229,7 +229,7 @@ class GDriveEventsHandler(GDriveEventProcesser):
     def __init__(self) -> None:
         print(f"\033[93mI am in init of so called singelton{id(self)}\033[0m")
 
-    def _process_event(self):
+    def __process_event(self):
         print("\033[93mstart to proceed\033[0m")
         drive = self.__DRIVE()
         session = AuthorizedSession(drive._creds)
@@ -246,6 +246,7 @@ class GDriveEventsHandler(GDriveEventProcesser):
         print(f"{changes=}")
         mapping = self._map_changes(changes)
         trashed_files = self._get_trashed(mapping)
+        return mapping
 
     # def __process_event(self, headers: dict):
 

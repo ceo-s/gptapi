@@ -252,6 +252,7 @@ class UserCollection:
 
         self = super().__new__(cls)
         self.__collection = collection
+        self.files = DBDriveFiles(collection.dir_id)
         return self
 
     @classmethod
