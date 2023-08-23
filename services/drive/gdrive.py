@@ -226,8 +226,8 @@ class GDriveEventsHandler(GDriveEventProcesser):
             cls.__SELF.__resource_uris = set()
         return cls.__SELF
 
-    def __init__(self) -> None:
-        print(f"\033[93mI am in init of so called singelton{id(self)}\033[0m")
+    # def __init__(self) -> None:
+        # print(f"\033[93mI am in init of so called singelton{id(self)}\033[0m")
 
     def __process_event(self):
         print("\033[93mstart to proceed\033[0m")
@@ -238,12 +238,12 @@ class GDriveEventsHandler(GDriveEventProcesser):
         fields = f'nextPageToken,newStartPageToken,changes(fileId,kind,removed,file(name,mimeType,parents,id,description,trashed,webContentLink,fileExtension))'
 
         for uri in self.__resource_uris:
-            print(f"{uri}&fields={fields}")
+            # print(f"{uri}&fields={fields}")
             resp = session.get(f"{uri}&fields={fields}")
-            print(f"{resp.json()=}")
+            # print(f"{resp.json()=}")
             changes += resp.json()["changes"]
 
-        print(f"{changes=}")
+        # print(f"{changes=}")
         mapping = self._map_changes(changes)
         trashed_files = self._get_trashed(mapping)
         return mapping
@@ -271,7 +271,7 @@ class GDriveEventsHandler(GDriveEventProcesser):
 
     async def __handle_event(self):
         print("in __handle_event")
-        await asyncio.sleep(10)
+        await asyncio.sleep(7)
         return self.__process_event()
 
     async def handle_event(self, headers: dict):
@@ -285,7 +285,7 @@ class GDriveEventsHandler(GDriveEventProcesser):
 
         self.__task = asyncio.create_task(self.__handle_event())
         self.__resource_uris.add(headers[self.Headers.Resource_URI.value])
-        print("Awaiting task", headers[self.Headers.Channel_ID.value])
+        print("Awaiting task")
         return await self.__task
 
 
