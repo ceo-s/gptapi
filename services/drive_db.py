@@ -12,7 +12,7 @@ async def db_drive_synchronization(event: Request):
         return
 
     for file_id, file in changes_mapping.items():
-        if file.get("fileExtension") == "txt":
+        if file.fileExtension == "txt":
             txt_file = file
             break
 

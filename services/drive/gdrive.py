@@ -7,6 +7,7 @@ from enum import Enum
 import asyncio
 from datetime import timedelta, datetime
 from functools import wraps
+from db import interfaces as I
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request, AuthorizedSession
@@ -169,12 +170,13 @@ class GDriveEventsPoller:
 
 class GDriveEventProcesser:
 
-    def _map_changes(self, changes: list[dict]):
+    def _map_changes(self, changes: list[dict]) -> dict[str, I.File]:
         changes_mapping = {}
 
         for change in changes:
             fileId = change["fileId"]
-            file = change["file"]
+            file = I.File.model_validate(change["file"])
+
             changes_mapping[fileId] = file
 
         return changes_mapping
