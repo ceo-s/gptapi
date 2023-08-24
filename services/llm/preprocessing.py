@@ -130,11 +130,11 @@ class Embedder(IEmbedder):
 
         print(f"{len(texts)=}")
         print(f"{len(texts[-1])=}")
-        # embedding = await openai.Embedding.acreate(
-        #     input=[text], model="text-embedding-ada-002")
-        # print("AFTER EMBEDDING")
-        # return embedding["data"][0]["embedding"]
-        return [[6.] * 1536] * len(texts)
+        embedding = await openai.Embedding.acreate(
+            input=[text], model="text-embedding-ada-002")
+        print("AFTER EMBEDDING")
+        return embedding["data"][0]["embedding"]
+        # return [[6.] * 1536] * len(texts)
 
 
 def generate_prompt(prompt: str, context: str) -> str:

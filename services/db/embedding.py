@@ -184,10 +184,63 @@ class BufferElement(NamedTuple):
 #         else:
 #             await super()._document_from_params(args[0], args[1], **kwargs)
 
-class DBDriveFiles:
+# class DBDriveFiles:
 
-    def __init__(self, collection_dir_id):
-        self.collection_dir_id = collection_dir_id
+#     def __init__(self, collection_dir_id):
+#         self.collection_dir_id = collection_dir_id
+
+#     async def create_file(self, file_id: str, file_name: str, content: bytes, description: Optional[str] = None):
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+
+#             file = EM.DriveFile(
+#                 file_id=file_id,
+#                 content=content,
+#             )
+
+#             metadata = EM.DocumentMetadata(
+#                 name=file_name,
+#                 description=description,
+#             )
+
+#             file.metadata_ = metadata
+
+#             await db_session.add(file)
+
+#     async def get_file(self, file_id: str) -> EM.DriveFile:
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+#             res = await db_session.execute(
+#                 select(EM.DriveFile)
+#                 .where(EM.DriveFile.collection_fk == self.collection_dir_id)
+#             )
+#             file = res.scalar_one_or_none()
+
+#             db_session.expunge_all()
+#             return file
+
+#     async def delete_file(self, file_id: str) -> None:
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+#             await db_session.execute(
+#                 delete(EM.DriveFile)
+#                 .where(EM.DriveFile.file_id == file_id)
+#             )
+
+#     async def list_drive_files(self):
+#         async with get_sessionmaker().begin() as db_session:
+#             db_session: AsyncSession
+#             res = await db_session.execute(
+#                 select(EM.DriveFile)
+#                 .where(EM.DriveFile.collection_fk == self.collection_dir_id)
+#             )
+#             files = res.all()
+
+#             db_session.expunge_all()
+#             return files
+
+
+class DBDriveFiles:
 
     async def create_file(self, file_id: str, file_name: str, content: bytes, description: Optional[str] = None):
         async with get_sessionmaker().begin() as db_session:
@@ -207,12 +260,40 @@ class DBDriveFiles:
 
             await db_session.add(file)
 
+    async def add_files_from_drive(self, *files: I.File):
+        async with get_sessionmaker().begin() as db_session:
+            db_session: AsyncSession
+            for file in files:
+
+                db_file = EM.DriveFile(
+                    file_id=file.id,
+                    content=file.content,
+                    collection_fk=file.parents[0]
+                )
+
+                metadata = EM.DocumentMetadata(
+                    name=file.name,
+                    description=file.description,
+                )
+
+                db_file.metadata_ = metadata
+
+                if file.trashed:
+                    self.__trash_file(db_session, db_file)
+                else:
+                    db_session.merge(file)
+
+                await db_session.commit()
+
+    async def __trash_file(self, db_session: AsyncSession, file: EM.DriveFile):
+        db_session.delete(file)
+
     async def get_file(self, file_id: str) -> EM.DriveFile:
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
             res = await db_session.execute(
                 select(EM.DriveFile)
-                .where(EM.DriveFile.collection_fk == self.collection_dir_id)
+                .where(EM.DriveFile.file_id == file_id)
             )
             file = res.scalar_one_or_none()
 
@@ -227,12 +308,12 @@ class DBDriveFiles:
                 .where(EM.DriveFile.file_id == file_id)
             )
 
-    async def list_drive_files(self):
+    async def list_drive_files(self, collection_fk):
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
             res = await db_session.execute(
                 select(EM.DriveFile)
-                .where(EM.DriveFile.collection_fk == self.collection_dir_id)
+                .where(EM.DriveFile.collection_fk == collection_fk)
             )
             files = res.all()
 
@@ -261,6 +342,7 @@ class UserCollection:
 
         self = super().__new__(cls)
         self.__collection = collection
+        self.files = DBDriveFiles(dir_id)
         return self
 
     @staticmethod

@@ -35,7 +35,7 @@ class DriveFile(BASE):
     __tablename__ = "drive_file"
 
     file_id: Mapped[str] = mapped_column(primary_key=True)
-    content = mapped_column(LargeBinary)
+    content: Mapped[str] = mapped_column()
 
     metadata_: Mapped["DocumentMetadata"] = relationship(
         back_populates="drive_file",

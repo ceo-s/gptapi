@@ -1,21 +1,18 @@
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional, Literal
-from enum import Enum
-
-
-class MimeTypes(Enum):
-
-    TXT = "text/plain"
+from pydantic import BaseModel, Field
+from typing import Optional
+from io import BytesIO
 
 
 class File(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    mimeType: str
+    mime_type: str = Field(alias="mimeType")
     trashed: bool
-    fileExtension: Optional[str] = None
+    file_extension: Optional[str] = Field(default=None, alias="fileExtension")
     parents: list[str]
+
+    content: Optional[BytesIO] = None
 
     def __str__(self) -> str:
         return "FILE --> " + str([f"{field}={getattr(self, field)}" for field in self.__fields__])

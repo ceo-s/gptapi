@@ -6,7 +6,6 @@ from uuid import uuid4
 from enum import Enum
 import asyncio
 from datetime import timedelta, datetime
-from functools import wraps
 from db import interfaces as I
 from io import BytesIO
 
@@ -18,6 +17,44 @@ from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 # If modifying these scopes, delete the file token.json.
+
+
+class MimeTypes(Enum):
+
+    FOLDER = "mimeType=application/vnd.google-apps.folder"
+    TEXT = "text/plain"
+    OFFICE_DOCUMENT = "mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    OFFICE_SPREADSHEET = "mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    GOOGLE_DOCUMENT = "mimeType=application/vnd.google-apps.document"
+    GOOGLE_SPREADSHEET = "mimeType=application/vnd.google-apps.spreadsheet"
+
+
+class Extensions(Enum):
+
+    TXT = "txt"
+    DOCX = "docx"
+    XLSX = "xlsx"
+
+
+class Headers(Enum):
+    Channel_ID = "X-Goog-Channel-ID"
+    Channel_Token = "X-Goog-Channel-Token"
+    Channel_Expiration = "X-Goog-Channel-Expiration"
+    Resource_ID = "X-Goog-Resource-ID"
+    Resource_URI = "X-Goog-Resource-URI"
+    Resource_State = "X-Goog-Resource-State"
+    Changed = "X-Goog-Changed"
+    Message_Number = "X-Goog-Message-Number"
+
+
+class ResourceStates(Enum):
+    SYNC = "sync"
+    ADD = "add"
+    REMOVE = "remove"
+    UPDATE = "update"
+    TRASH = "trash"
+    UNTRASH = "untrash"
+    CHANGE = "change"
 
 
 class GDriveAuth:
@@ -105,27 +142,56 @@ class GDrive(GDriveAuth):
             print(f'An error occurred: {error}')
 
         return file.get("id")
-    
-    def get_file_content(self, file_id: str, mime_type: str):
-        file_content = self.__get_simple_file(file_id)
-        return file_content
 
-    def __get_google_file_content(self):
-        ...
+    def get_file_content(self, file_id: str, mime_type: MimeTypes) -> BytesIO:
 
-    def __get_simple_file(self, file_id: str):
+        match mime_type:
+            case MimeTypes.GOOGLE_DOCUMENT | MimeTypes.GOOGLE_SPREADSHEET:
+                request = self._service.files().export(fileId=file_id, mimeType=mime_type)
+
+            case _:
+                request = self._service.files().get_media(fileId=file_id)
+
         try:
-            query = self._service.files().get_media(fileId=file_id)
             file_content = BytesIO()
-            downloader = MediaIoBaseDownload(file_content, query)
+            downloader = MediaIoBaseDownload(file_content, request)
+
             done = False
             while not done:
                 status, done = downloader.next_chunk()
                 print(f"{status=}, {done=}")
         except HttpError as error:
             print(f'An error occurred: {error}')
+
         file_content.seek(0)
-        return file_content.read()
+        return file_content
+
+    # def __export_file(self, file_id: str, mime_type: str) -> BytesIO:
+
+    #     request = self._service.files().export(fileId=file_id, mimeType=mime_type)
+    #     file_content = BytesIO()
+    #     downloader = MediaIoBaseDownload(file_content, request)
+
+    #     done = False
+    #     while not done:
+    #         status, done = downloader.next_chunk()
+    #         print(f"{status=}, {done=}")
+
+    # def __get_file_content(self, file_id: str) -> BytesIO:
+    #     try:
+    #         query = self._service.files().get_media(fileId=file_id)
+    #         file_content = BytesIO()
+    #         downloader = MediaIoBaseDownload(file_content, query)
+
+    #         done = False
+    #         while not done:
+    #             status, done = downloader.next_chunk()
+    #             print(f"{status=}, {done=}")
+    #     except HttpError as error:
+    #         print(f'An error occurred: {error}')
+
+    #     file_content.seek(0)
+    #     return file_content
 
     def __get_dir_id(self, dirname: str):
         try:
@@ -181,11 +247,6 @@ class GDriveEventsPoller:
         self.__channel = drive._service.changes().watch(
             pageToken=self.start_page_token, body=body).execute()
 
-#    def get_expiration_time(self):
-#        ttl = duration_pb2.Duration()
-#        ttl.seconds = int(timedelta(weeks=1).total_seconds())
-#        return ttl
-
     def get_expiration_time(self):
         datetime_expiration = datetime.now() + timedelta(weeks=1)
         return int(datetime.timestamp(datetime_expiration)*1000)
@@ -193,55 +254,60 @@ class GDriveEventsPoller:
 
 class GDriveEventProcesser:
 
-    def _map_changes(self, changes: list[dict]) -> dict[str, I.File]:
+    ROOT_DIR_ID = "0AM5SefLlkFoLUk9PVA"
+
+    def _get_changed_files(self, changes: list[dict]) -> dict[str, I.File]:
+
         changes_mapping = {}
 
         for change in changes:
-            fileId = change["fileId"]
+            file_id = change["fileId"]
             file = I.File.model_validate(change["file"])
 
-            changes_mapping[fileId] = file
+            changes_mapping[file_id] = file
 
-        return changes_mapping
+        files_mapping = self._remove_folders(changes_mapping)
+        self._set_parents_folders(changes_mapping)
 
-    def _get_trashed(self, mapping: dict):
-        return [file for file in mapping.values() if file.trashed]
+        return files_mapping
 
-    def _set_parents_folders(self):
+    def _remove_folders(self, changes_mapping: dict[str, I.File]) -> dict[str, I.File]:
 
-        ...
+        return {file_id: file for file_id, file in changes_mapping.items() if file.mime_type != MimeTypes.FOLDER.value}
+
+    def _set_parents_folders(self, files_mapping: dict[str, I.File], changes_mapping: dict[str, I.File]) -> None:
+
+        for file in files_mapping.values():
+            parent_id = file.parents[0]
+            while changes_mapping[parent_id].parents[0] != self.ROOT_DIR_ID:
+                parent_id = changes_mapping[parent_id].parents[0]
+
+            file.parents[0] = parent_id
 
 
-class GDriveEventsHandler(GDriveEventProcesser):
+class GDriveContentPreprocessor:
+
+    def get_file_content(self, drive: GDrive, file: I.File):
+        mime_type = MimeTypes(file.mime_type)
+        content = drive.get_file_content(file.id, mime_type)
+
+        match mime_type:
+            case MimeTypes.GOOGLE_SPREADSHEET | MimeTypes.OFFICE_SPREADSHEET:
+                self.process_table()
+            case _:
+                self.process_document()
+
+    def process_table(self, content: BytesIO):
+        print("SPREADSHiT CONTENT", content.read())
+
+    def process_document(self, content: BytesIO):
+        print("DOC CONTENT", content.read())
+
+
+class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
 
     __SELF: "GDriveEventsHandler" = None
     __DRIVE = GDrive
-
-    class Headers(Enum):
-        Channel_ID = "X-Goog-Channel-ID"
-        Channel_Token = "X-Goog-Channel-Token"
-        Channel_Expiration = "X-Goog-Channel-Expiration"
-        Resource_ID = "X-Goog-Resource-ID"
-        Resource_URI = "X-Goog-Resource-URI"
-        Resource_State = "X-Goog-Resource-State"
-        Changed = "X-Goog-Changed"
-        Message_Number = "X-Goog-Message-Number"
-
-    class ResourceStates(Enum):
-        SYNC = "sync"
-        ADD = "add"
-        REMOVE = "remove"
-        UPDATE = "update"
-        TRASH = "trash"
-        UNTRASH = "untrash"
-        CHANGE = "change"
-
-    class UpdateType(Enum):
-        CONTENT = "content"
-        PROPERTIES = "properties"
-        PARENTS = "parents"
-        CHILDREN = "children"
-        PERMISSIONS = "permissions"
 
     def __new__(cls) -> Self:
         print("I am in new method and this is __SELF=", cls.__SELF)
@@ -254,7 +320,7 @@ class GDriveEventsHandler(GDriveEventProcesser):
     # def __init__(self) -> None:
         # print(f"\033[93mI am in init of so called singelton{id(self)}\033[0m")
 
-    def __process_event(self):
+    def __process_event(self) -> dict[str, I.File]:
         print("\033[93mstart to proceed\033[0m")
         drive = self.__DRIVE()
         session = AuthorizedSession(drive._creds)
@@ -263,36 +329,15 @@ class GDriveEventsHandler(GDriveEventProcesser):
         fields = f'nextPageToken,newStartPageToken,changes(fileId,kind,removed,file(name,mimeType,parents,id,description,trashed,webContentLink,fileExtension))'
 
         for uri in self.__resource_uris:
-            # print(f"{uri}&fields={fields}")
             resp = session.get(f"{uri}&fields={fields}")
-            # print(f"{resp.json()=}")
             changes += resp.json()["changes"]
 
         # print(f"{changes=}")
-        mapping = self._map_changes(changes)
-        trashed_files = self._get_trashed(mapping)
-        return mapping
+        files = self._get_changed_files(changes)
+        for file in files.values():
+            self.get_file_content(drive, file)
 
-    # def __process_event(self, headers: dict):
-
-    #     if headers[self.Headers.Resource_State.value] == self.ResourceStates.SYNC.value:
-    #         return
-    #     drive = self.__DRIVE()
-    #     session = AuthorizedSession(drive._creds)
-    #     resp = session.get(headers[self.Headers.Resource_URI.value])
-    #     print(headers)
-    #     print(resp.json())
-    #     print(len(resp.json()["changes"]))
-    #     last = resp.json()["changes"][-1]
-    #     print("Last change -->", last)
-    #     fields = 'kind,id,name,mimeType,description,trashed,parents'
-    #     fields = '*'
-    #     resp2 = session.get(
-    #         f"https://www.googleapis.com/drive/v3/files/{last['file']['id']}?fields={fields}")
-
-    #     print(resp2.json())
-    # 'https://www.googleapis.com/drive/v3/changes?alt=json&pageToken=232'
-    # 'https://www.googleapis.com/drive/v3/changes?alt=json&pageToken=232'
+        return files
 
     async def __handle_event(self):
         print("in __handle_event")
@@ -301,7 +346,7 @@ class GDriveEventsHandler(GDriveEventProcesser):
 
     async def handle_event(self, headers: dict):
 
-        if headers[self.Headers.Resource_State.value] == self.ResourceStates.SYNC.value:
+        if headers[Headers.Resource_State.value] == ResourceStates.SYNC.value:
             return
 
         if self.__task is not None:
@@ -309,9 +354,11 @@ class GDriveEventsHandler(GDriveEventProcesser):
             self.__task.cancel()
 
         self.__task = asyncio.create_task(self.__handle_event())
-        self.__resource_uris.add(headers[self.Headers.Resource_URI.value])
+        self.__resource_uris.add(headers[Headers.Resource_URI.value])
         print("Awaiting task")
-        return await self.__task
+        task_res = await self.__task
+        print("TASK RES", task_res)
+        return task_res
 
 
 class GDriveEventsManager:
@@ -319,15 +366,3 @@ class GDriveEventsManager:
     def __init__(self) -> None:
         self.POLLER = GDriveEventsPoller()
         self.HANDLER = GDriveEventsHandler()
-
-
-def main():
-
-    drive = GDrive()
-    drive.get_basedir()
-    # drive.register_event_handler()
-    print(drive.mkdir("ja-ja"))
-
-
-if __name__ == '__main__':
-    main()
