@@ -28,7 +28,7 @@ class MimeTypes(Enum):
     OFFICE_DOCUMENT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     OFFICE_SPREADSHEET = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     GOOGLE_DOCUMENT = "application/vnd.google-apps.document"
-    GOOGLE_SPREADSHEET = "application/vnd.google-apps.spreadsheet" 
+    GOOGLE_SPREADSHEET = "application/vnd.google-apps.spreadsheet"
 
 
 class Extensions(Enum):
@@ -149,10 +149,12 @@ class GDrive(GDriveAuth):
 
         match mime_type:
             case MimeTypes.GOOGLE_DOCUMENT:
-                request = self._service.files().export(fileId=file_id, mimeType=MimeTypes.OFFICE_DOCUMENT.value)
+                request = self._service.files().export(
+                    fileId=file_id, mimeType=MimeTypes.OFFICE_DOCUMENT.value)
 
             case MimeTypes.GOOGLE_SPREADSHEET:
-                request = self._service.files().export(fileId=file_id, mimeType=MimeTypes.OFFICE_SPREADSHEET.value)
+                request = self._service.files().export(
+                    fileId=file_id, mimeType=MimeTypes.OFFICE_SPREADSHEET.value)
 
             case _:
                 request = self._service.files().get_media(fileId=file_id)
@@ -170,6 +172,9 @@ class GDrive(GDriveAuth):
 
         file_content.seek(0)
         return file_content
+
+    def get_parent_id(self, file_id: str) -> str:
+        return self._service.files().get(fileId=file_id, fields='parents').execute()["parents"][0]
 
     # def __export_file(self, file_id: str, mime_type: str) -> BytesIO:
 
@@ -283,16 +288,16 @@ class GDriveEventProcesser:
     def _is_on_root_level(self, file: I.File):
         return file.parents[0] == self.ROOT_DIR_ID
 
-
     def _set_parents_folders(self, files_mapping: dict[str, I.File], changes_mapping: dict[str, I.File]) -> None:
-
+        drive = GDrive()
         for file in files_mapping.values():
+            file_id = file.id
             parent_id = file.parents[0]
-            while changes_mapping[parent_id].parents[0] != self.ROOT_DIR_ID:
-                parent = changes_mapping[parent_id]
-                parent_id = parent.parents[0]
+            while parent_id != self.ROOT_DIR_ID:
+                file_id = parent_id
+                parent_id = drive.get_parent_id(file_id)
 
-            file.parents[0] = parent_id
+            file.parents[0] = file_id
 
 
 class GDriveContentPreprocessor:
@@ -318,7 +323,7 @@ class GDriveContentPreprocessor:
         col_names = (cell.value for cell in sheet[1])
         col_names = tuple(filter(lambda name: name is not None, col_names))
         max_col = len(col_names)
-        
+
         result = ""
         for i in range(2, sheet.max_row+1):
             for j in range(max_col):
@@ -341,27 +346,38 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
     __DRIVE = GDrive
 
     def __new__(cls) -> Self:
-        print("I am in new method and this is __SELF=", cls.__SELF)
+        print("I am in new method and this is __SELF=", id(cls.__SELF))
         if cls.__SELF is None:
-            cls.__SELF = super().__new__(cls)
-            cls.__SELF.__task: asyncio.Task | None = None
-            cls.__SELF.__resource_uris = set()
+            self = super().__new__(cls)
+            self.__task = None
+            self.__resource_uris = []
+            self.__events_count = 0
+            cls.__SELF = self
+
         return cls.__SELF
 
-    # def __init__(self) -> None:
-        # print(f"\033[93mI am in init of so called singelton{id(self)}\033[0m")
+    def __init__(self) -> None:
+        self.__task: asyncio.Task | None
+        self.__resource_uris: list
+        self.__events_count: int
 
     def __process_event(self) -> dict[str, I.File]:
-        print("\033[93mstart to proceed\033[0m")
+        print("\033[93mStart to proceed\033[0m")
         drive = self.__DRIVE()
         session = AuthorizedSession(drive._creds)
         changes: list[dict] = []
+        events_count = self.__events_count
+
+        # Resetting for nex events
+        self.__events_count = 0
+        self.__resource_uris.clear()
 
         fields = f'nextPageToken,newStartPageToken,changes(fileId,kind,removed,file(name,mimeType,parents,id,description,trashed,webContentLink,fileExtension))'
-
         for uri in self.__resource_uris:
             resp = session.get(f"{uri}&fields={fields}")
             changes += resp.json()["changes"]
+
+        changes = changes[-events_count:]
 
         # print(f"{changes=}")
         files = self._get_changed_files(changes)
@@ -372,7 +388,7 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
 
     async def __handle_event(self):
         print("in __handle_event")
-        await asyncio.sleep(7)
+        await asyncio.sleep(5)
         return self.__process_event()
 
     async def handle_event(self, headers: dict):
@@ -380,17 +396,22 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
         if headers[Headers.Resource_State.value] == ResourceStates.SYNC.value:
             return
         print("Resource uris", self.__resource_uris)
-
         if self.__task is not None:
             print("\033[93mCanceling task\033[0m")
             self.__task.cancel()
 
+        self.__events_count += 1
         self.__task = asyncio.create_task(self.__handle_event())
-        self.__resource_uris.add(headers[Headers.Resource_URI.value])
+
+        self._add_resource_uri(headers[Headers.Resource_URI.value])
         print("Awaiting task")
         task_res = await self.__task
         print("TASK RES", task_res)
         return task_res
+
+    async def _add_resource_uri(self, uri: str):
+        if uri not in self.__resource_uris:
+            self.__resource_uris.append(uri)
 
 
 class GDriveEventsManager:
