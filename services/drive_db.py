@@ -1,27 +1,45 @@
 from fastapi import Request
+from typing import Sequence
 
 from .drive import GDriveEventsManager, GDrive
-from .db import DBDriveFiles
+from .db import DBDriveFiles, DBDocuments
 from .llm.preprocessing import Embedder
+import db.interfaces as I
 
 
 async def db_drive_synchronization(event: Request):
 
     manager = GDriveEventsManager()
-    files = await manager.HANDLER.handle_event(headers=event.headers)
+    files_maping = await manager.HANDLER.handle_event(headers=event.headers)
 
-    if files is None:
+    if files_maping is None:
         print("FILES IS NONE =(")
         return
-    print(files)
-    # await DBDriveFiles().add_files_from_drive(*files.keys())
+    print(files_maping)
 
-    # embedder = Embedder(512, 32, 'OverlapOptimizer')
-    # for file in files.values():
-    #     await embedder.text_to_embeddings(file.content)
+    drive_files_manager = DBDriveFiles()
+    existing_files = await drive_files_manager.list_files(tuple(files_maping.keys()))
 
-    # for file_id, file in files.items():
-    #     # if file.fileExtension == "txt":
-    #     #     txt_file = file
-    #     #     break
-    #     print(file)
+    # File ids to exclude from re-embedding
+    excluded = []
+
+    for fileid_content_tuple in existing_files:
+        if files_maping[fileid_content_tuple[0]].content == fileid_content_tuple[1]:
+            excluded.append(fileid_content_tuple[0])
+
+    await drive_files_manager.add_files_from_drive(tuple(files_maping.values()))
+    await embed_into_chunked_documents()
+
+
+async def embed_into_chunked_documents(files: Sequence[I.File], excluded: Sequence[str]):
+
+    embedder = Embedder(512, 32, 'OverlapOptimizer')
+    documents_manager = DBDocuments()
+
+    for file in files:
+        if file.trashed:
+            await documents_manager.delete_documents(file.id)
+
+        elif file.id not in excluded:
+            text_cunks, embedding_data = await embedder.text_to_embeddings(file.content)
+            await documents_manager.recreate_documents(file.id, text_cunks, embedding_data)

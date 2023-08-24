@@ -176,33 +176,6 @@ class GDrive(GDriveAuth):
     def get_parent_id(self, file_id: str) -> str:
         return self._service.files().get(fileId=file_id, fields='parents').execute()["parents"][0]
 
-    # def __export_file(self, file_id: str, mime_type: str) -> BytesIO:
-
-    #     request = self._service.files().export(fileId=file_id, mimeType=mime_type)
-    #     file_content = BytesIO()
-    #     downloader = MediaIoBaseDownload(file_content, request)
-
-    #     done = False
-    #     while not done:
-    #         status, done = downloader.next_chunk()
-    #         print(f"{status=}, {done=}")
-
-    # def __get_file_content(self, file_id: str) -> BytesIO:
-    #     try:
-    #         query = self._service.files().get_media(fileId=file_id)
-    #         file_content = BytesIO()
-    #         downloader = MediaIoBaseDownload(file_content, query)
-
-    #         done = False
-    #         while not done:
-    #             status, done = downloader.next_chunk()
-    #             print(f"{status=}, {done=}")
-    #     except HttpError as error:
-    #         print(f'An error occurred: {error}')
-
-    #     file_content.seek(0)
-    #     return file_content
-
     def __get_dir_id(self, dirname: str):
         try:
             folder = self._service.files().list(
@@ -380,18 +353,18 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
         changes = changes[-events_count:]
 
         # print(f"{changes=}")
-        files = self._get_changed_files(changes)
-        for file in files.values():
+        files_mapping = self._get_changed_files(changes)
+        for file in files_mapping.values():
             self.get_file_content(drive, file)
 
-        return files
+        return files_mapping
 
     async def __handle_event(self):
         print("in __handle_event")
         await asyncio.sleep(5)
         return self.__process_event()
 
-    async def handle_event(self, headers: dict):
+    async def handle_event(self, headers: dict) -> dict[str, I.File] | None:
 
         if headers[Headers.Resource_State.value] == ResourceStates.SYNC.value:
             return

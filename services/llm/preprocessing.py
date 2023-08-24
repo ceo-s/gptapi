@@ -122,7 +122,7 @@ class Embedder(IEmbedder):
         self.overlap = overlap
         self._optimizer = OPTIMIZERS_MAPPING[optimizer]
 
-    async def text_to_embeddings(self, text: str) -> list[list[float]]:
+    async def text_to_embeddings(self, text: str) -> tuple[list[dict], list[str]]:
         print("CREATING EMBEDDING")
         preprocessor = TextPreprocessor(text)
         texts = preprocessor.split_by_n_chars(
@@ -130,10 +130,13 @@ class Embedder(IEmbedder):
 
         print(f"{len(texts)=}")
         print(f"{len(texts[-1])=}")
+
         embedding = await openai.Embedding.acreate(
-            input=[text], model="text-embedding-ada-002")
+            input=texts, model="text-embedding-ada-002")
         print("AFTER EMBEDDING")
-        return embedding["data"][0]["embedding"]
+
+        return texts, embedding["data"]
+        # return embedding["data"][0]["embedding"]
         # return [[6.] * 1536] * len(texts)
 
 

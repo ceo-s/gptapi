@@ -1,4 +1,4 @@
-from typing import Literal, overload, Type, NamedTuple, Optional
+from typing import Literal, overload, Type, NamedTuple, Optional, Sequence
 from enum import Enum
 import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -242,25 +242,25 @@ class BufferElement(NamedTuple):
 
 class DBDriveFiles:
 
-    async def create_file(self, file_id: str, file_name: str, content: bytes, description: Optional[str] = None):
-        async with get_sessionmaker().begin() as db_session:
-            db_session: AsyncSession
+    # async def create_file(self, file_id: str, file_name: str, content: bytes, description: Optional[str] = None):
+    #     async with get_sessionmaker().begin() as db_session:
+    #         db_session: AsyncSession
 
-            file = EM.DriveFile(
-                file_id=file_id,
-                content=content,
-            )
+    #         file = EM.DriveFile(
+    #             file_id=file_id,
+    #             content=content,
+    #         )
 
-            metadata = EM.DocumentMetadata(
-                name=file_name,
-                description=description,
-            )
+    #         metadata = EM.DocumentMetadata(
+    #             name=file_name,
+    #             description=description,
+    #         )
 
-            file.metadata_ = metadata
+    #         file.metadata_ = metadata
 
-            await db_session.add(file)
+    #         await db_session.add(file)
 
-    async def add_files_from_drive(self, *files: I.File):
+    async def add_files_from_drive(self, files: Sequence[I.File]):
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
             for file in files:
@@ -300,20 +300,20 @@ class DBDriveFiles:
             db_session.expunge_all()
             return file
 
-    async def delete_file(self, file_id: str) -> None:
+    async def delete_files(self, file_ids: Sequence[str]) -> None:
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
             await db_session.execute(
                 delete(EM.DriveFile)
-                .where(EM.DriveFile.file_id == file_id)
+                .where(EM.DriveFile.file_id.in_(file_ids))
             )
 
-    async def list_drive_files(self, collection_fk):
+    async def list_files(self, file_ids: Sequence[str]):
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
             res = await db_session.execute(
-                select(EM.DriveFile)
-                .where(EM.DriveFile.collection_fk == collection_fk)
+                select(EM.DriveFile.file_id, EM.DriveFile.content)
+                .where(EM.DriveFile.file_id.in_(file_ids))
             )
             files = res.all()
 
@@ -322,7 +322,44 @@ class DBDriveFiles:
 
 
 class DBDocuments:
-    ...
+
+    async def recreate_documents(self, drive_file_id: str, texts: list[str], embedding_dicts: list[dict]):
+        await self.delete_documents(drive_file_id)
+        await self.create_documents(drive_file_id, texts, embedding_dicts)
+
+    async def create_documents(self, drive_file_id: str, texts: list[str], embedding_dicts: list[dict]):
+        async with get_sessionmaker().begin() as db_session:
+            db_session: AsyncSession
+            for i in range(len(texts)):
+
+                db_file = EM.Document(
+                    text=texts[i],
+                    embedding=embedding_dicts[i]["embedding"],
+                    drive_file_fk=drive_file_id
+                )
+                db_session.add(db_file)
+
+            await db_session.commit()
+
+    async def delete_documents(self, drive_file_id: Sequence[str]) -> None:
+        async with get_sessionmaker().begin() as db_session:
+            db_session: AsyncSession
+            await db_session.execute(
+                delete(EM.Document)
+                .where(EM.Document.drive_file_fk == drive_file_id)
+            )
+
+    # async def list_files(self, file_ids: Sequence[str]):
+    #     async with get_sessionmaker().begin() as db_session:
+    #         db_session: AsyncSession
+    #         res = await db_session.execute(
+    #             select(EM.DriveFile.file_id, EM.DriveFile.content)
+    #             .where(EM.DriveFile.file_id.in_(file_ids))
+    #         )
+    #         files = res.all()
+
+    #         db_session.expunge_all()
+    #         return files
 
 
 class UserCollection:
