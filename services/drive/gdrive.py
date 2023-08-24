@@ -289,7 +289,8 @@ class GDriveEventProcesser:
         for file in files_mapping.values():
             parent_id = file.parents[0]
             while changes_mapping[parent_id].parents[0] != self.ROOT_DIR_ID:
-                parent_id = changes_mapping[parent_id].parents[0]
+                parent = changes_mapping[parent_id]
+                parent_id = parent.parents[0]
 
             file.parents[0] = parent_id
 
@@ -378,6 +379,7 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
 
         if headers[Headers.Resource_State.value] == ResourceStates.SYNC.value:
             return
+        print("Resource uris", self.__resource_uris)
 
         if self.__task is not None:
             print("\033[93mCanceling task\033[0m")
