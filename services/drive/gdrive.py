@@ -8,6 +8,7 @@ import asyncio
 from datetime import timedelta, datetime
 from functools import wraps
 from db import interfaces as I
+from io import BytesIO
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request, AuthorizedSession
@@ -15,6 +16,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 # If modifying these scopes, delete the file token.json.
 
 
@@ -103,6 +105,27 @@ class GDrive(GDriveAuth):
             print(f'An error occurred: {error}')
 
         return file.get("id")
+    
+    def get_file_content(self, file_id: str, mime_type: str):
+        file_content = self.__get_simple_file(file_id)
+        return file_content
+
+    def __get_google_file_content(self):
+        ...
+
+    def __get_simple_file(self, file_id: str):
+        try:
+            query = self._service.files().get_media(fileId=file_id)
+            file_content = BytesIO()
+            downloader = MediaIoBaseDownload(file_content, query)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+                print(f"{status=}, {done=}")
+        except HttpError as error:
+            print(f'An error occurred: {error}')
+        file_content.seek(0)
+        return file_content.read()
 
     def __get_dir_id(self, dirname: str):
         try:
@@ -182,7 +205,7 @@ class GDriveEventProcesser:
         return changes_mapping
 
     def _get_trashed(self, mapping: dict):
-        return tuple(filter(lambda items: items[1]["trashed"] == True, mapping.items()))
+        return [file for file in mapping.values() if file.trashed]
 
     def _set_parents_folders(self):
 

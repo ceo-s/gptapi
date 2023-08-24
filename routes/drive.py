@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.post("/events/")
 async def event_handler(event: Request):
-    print("I am in event_handler router")
+    print("I am in event_handler router", event.headers.get("x-goog-channel-id"))
     task = create_task(db_drive_synchronization(event))
     print("SENDING A RESPONSE")
     return "A"

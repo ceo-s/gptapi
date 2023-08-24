@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
     print("this is lifespan start")
     drive_manager = GDriveEventsManager()
     await drive_manager.POLLER.start_polling()
-    print("this is pointer of poller in lifespan", id(drive_manager.POLLER))
+
     yield
     drive_manager.POLLER.delete_channel()
     print("this is lifespan end")
