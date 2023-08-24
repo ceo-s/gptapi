@@ -13,7 +13,7 @@ async def db_drive_synchronization(event: Request):
     if files is None:
         print("FILES IS NONE =(")
         return
-
+    print(files)
     # await DBDriveFiles().add_files_from_drive(*files.keys())
 
     # embedder = Embedder(512, 32, 'OverlapOptimizer')

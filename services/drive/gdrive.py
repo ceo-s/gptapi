@@ -8,6 +8,8 @@ import asyncio
 from datetime import timedelta, datetime
 from db import interfaces as I
 from io import BytesIO
+from docx import Document
+from openpyxl import load_workbook
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request, AuthorizedSession
@@ -21,12 +23,12 @@ from googleapiclient.http import MediaIoBaseDownload
 
 class MimeTypes(Enum):
 
-    FOLDER = "mimeType=application/vnd.google-apps.folder"
+    FOLDER = "application/vnd.google-apps.folder"
     TEXT = "text/plain"
-    OFFICE_DOCUMENT = "mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    OFFICE_SPREADSHEET = "mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    GOOGLE_DOCUMENT = "mimeType=application/vnd.google-apps.document"
-    GOOGLE_SPREADSHEET = "mimeType=application/vnd.google-apps.spreadsheet"
+    OFFICE_DOCUMENT = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    OFFICE_SPREADSHEET = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    GOOGLE_DOCUMENT = "application/vnd.google-apps.document"
+    GOOGLE_SPREADSHEET = "application/vnd.google-apps.spreadsheet" 
 
 
 class Extensions(Enum):
@@ -146,8 +148,11 @@ class GDrive(GDriveAuth):
     def get_file_content(self, file_id: str, mime_type: MimeTypes) -> BytesIO:
 
         match mime_type:
-            case MimeTypes.GOOGLE_DOCUMENT | MimeTypes.GOOGLE_SPREADSHEET:
-                request = self._service.files().export(fileId=file_id, mimeType=mime_type)
+            case MimeTypes.GOOGLE_DOCUMENT:
+                request = self._service.files().export(fileId=file_id, mimeType=MimeTypes.OFFICE_DOCUMENT.value)
+
+            case MimeTypes.GOOGLE_SPREADSHEET:
+                request = self._service.files().export(fileId=file_id, mimeType=MimeTypes.OFFICE_SPREADSHEET.value)
 
             case _:
                 request = self._service.files().get_media(fileId=file_id)
@@ -259,21 +264,25 @@ class GDriveEventProcesser:
     def _get_changed_files(self, changes: list[dict]) -> dict[str, I.File]:
 
         changes_mapping = {}
+        files_mapping = {}
 
         for change in changes:
             file_id = change["fileId"]
             file = I.File.model_validate(change["file"])
 
             changes_mapping[file_id] = file
+            if (not self._is_folder(file)) and (not self._is_on_root_level(file)):
+                files_mapping[file_id] = file
 
-        files_mapping = self._remove_folders(changes_mapping)
-        self._set_parents_folders(changes_mapping)
-
+        self._set_parents_folders(files_mapping, changes_mapping)
         return files_mapping
 
-    def _remove_folders(self, changes_mapping: dict[str, I.File]) -> dict[str, I.File]:
+    def _is_folder(self, file: I.File) -> bool:
+        return file.mime_type == MimeTypes.FOLDER.value
 
-        return {file_id: file for file_id, file in changes_mapping.items() if file.mime_type != MimeTypes.FOLDER.value}
+    def _is_on_root_level(self, file: I.File):
+        return file.parents[0] == self.ROOT_DIR_ID
+
 
     def _set_parents_folders(self, files_mapping: dict[str, I.File], changes_mapping: dict[str, I.File]) -> None:
 
@@ -290,18 +299,39 @@ class GDriveContentPreprocessor:
     def get_file_content(self, drive: GDrive, file: I.File):
         mime_type = MimeTypes(file.mime_type)
         content = drive.get_file_content(file.id, mime_type)
+        content_string: str
 
         match mime_type:
             case MimeTypes.GOOGLE_SPREADSHEET | MimeTypes.OFFICE_SPREADSHEET:
-                self.process_table()
+                content_string = self.process_table(content)
+            case MimeTypes.GOOGLE_DOCUMENT | MimeTypes.OFFICE_DOCUMENT:
+                content_string = self.process_document(content)
             case _:
-                self.process_document()
+                content_string = self.process_txt(content)
+
+        file.content = content_string
 
     def process_table(self, content: BytesIO):
-        print("SPREADSHiT CONTENT", content.read())
+        workbook = load_workbook(content)
+        sheet = workbook.active
+        col_names = (cell.value for cell in sheet[1])
+        col_names = tuple(filter(lambda name: name is not None, col_names))
+        max_col = len(col_names)
+        
+        result = ""
+        for i in range(2, sheet.max_row+1):
+            for j in range(max_col):
+                result += f"{col_names[j]}:\n-{sheet[i][j].value}\n"
+            result += "\n"
+
+        return result
 
     def process_document(self, content: BytesIO):
-        print("DOC CONTENT", content.read())
+        document = Document(content)
+        return " ".join([paragraph.text for paragraph in document.paragraphs])
+
+    def process_txt(self, content: BytesIO):
+        "DOC CONTENT", content.read()
 
 
 class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):

@@ -12,7 +12,7 @@ class File(BaseModel):
     file_extension: Optional[str] = Field(default=None, alias="fileExtension")
     parents: list[str]
 
-    content: Optional[BytesIO] = None
+    content: Optional[str] = None
 
     def __str__(self) -> str:
         return "FILE --> " + str([f"{field}={getattr(self, field)}" for field in self.__fields__])
