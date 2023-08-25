@@ -84,7 +84,7 @@ class DBUser(IUser):
 
             collection = EM.Collection(
                 dir_id=drive_dir_id,
-                documents=[],
+                drive_files=[],
             )
 
             new_user.settings = user_settings
