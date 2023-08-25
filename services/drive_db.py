@@ -57,7 +57,7 @@ async def db_drive_synchronization(event: Request):
         )),
     )
 
-    await embed_into_chunked_documents(files_mapping.values(), excluded)
+    await embed_into_chunked_documents((*files_to_create, *files_to_update_from), files_to_delete, excluded)
 
 
 async def embed_into_chunked_documents(files_to_embed: Sequence[I.File], files_to_delete: Sequence[I.File], excluded: Sequence[str]):
@@ -72,4 +72,4 @@ async def embed_into_chunked_documents(files_to_embed: Sequence[I.File], files_t
         if file.id not in excluded:
 
             text_cunks, embedding_data = await embedder.text_to_embeddings(file.content)
-            await documents_manager.recreate_documents(file.id, text_cunks, embedding_data)
+            await documents_manager.create_documents(file.id, text_cunks, embedding_data)

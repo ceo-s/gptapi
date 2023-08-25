@@ -332,10 +332,6 @@ class DBDriveFiles:
 
 class DBDocuments:
 
-    async def recreate_documents(self, drive_file_id: str, texts: list[str], embedding_dicts: list[dict]):
-        await self.delete_documents(drive_file_id)
-        await self.create_documents(drive_file_id, texts, embedding_dicts)
-
     async def create_documents(self, drive_file_id: str, texts: list[str], embedding_dicts: list[dict]):
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
