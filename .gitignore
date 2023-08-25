@@ -1,5 +1,5 @@
 .vscode
-.env
+.env*
 alembic.ini
 test*.py
 **/__pycache__
