@@ -44,11 +44,13 @@ class DBUser(IUser):
         res = self.__user.__dict__
 
         res["settings"] = res["settings"].__dict__
-        res['collection'] = res['collection'].__dict__
-
+        #res['collection'] = res['collection'].__dict__
+        res.pop("collection")
+        print(res["settings"])
+        #print("COLLECTION => ",res["collection"])
         res.pop("_sa_instance_state")
         res["settings"].pop("_sa_instance_state")
-        res['collection'].pop("_sa_instance_state")
+        #res['collection'].pop("_sa_instance_state")
 
         return res
 

@@ -27,6 +27,7 @@ async def authenticate_user(user_data: I.User):
 
 @router.post("/get-user-data/")
 async def get_user_data(user_data: I.OUser):
+    print("IN GET USER DATA")
     user = await DBUser.from_id(user_data.id)
 
     return user.dict()

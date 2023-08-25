@@ -356,11 +356,19 @@ class DBDocuments:
                 .where(EM.Document.drive_file_fk.in_(file_ids))
             )
 
-    async def query_documents(self, query_embedding: list[float], n_documents: int = 3):
+    async def query_documents(self, user_id: int, query_embedding: list[float], n_documents: int = 3):
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
-            res = await db_session.scalars(select(EM.Document.embedding.l2_distance(
-                query_embedding)).limit(n_documents))
+
+            dir_id = await db_session.scalar(select(EM.Collection.dir_id).where(EM.Collection.user_fk == user_id))
+            file_ids = (await db_session.scalars(select(EM.DriveFile.file_id).where(EM.DriveFile.collection_fk == dir_id))).all()
+            print(f"{dir_id=} & {file_ids}")
+
+            res = await db_session.scalars(
+                select(EM.Document.text).where(EM.Document.drive_file_fk.in_(file_ids)).order_by(
+                    EM.Document.embedding.l2_distance(query_embedding)).limit(n_documents)
+            ) 
+            
 
             documents = res.all()
             db_session.expunge_all()

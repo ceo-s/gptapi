@@ -11,8 +11,8 @@ router = APIRouter()
 @router.post("/chat-compeltion/")
 async def get_chat_completion(q_user: I.UserQuery):
     user = await DBUser.from_id(q_user.id)
-    get_context(q_user.query)
-    context = ""
+    context_documents = await get_context(q_user.id, q_user.query)
+    context = "\n".join(context_documents)
     prompt = generate_prompt(user.settings.prompt, context)
     history = user.settings.history
 
