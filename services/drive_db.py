@@ -1,5 +1,6 @@
 from fastapi import Request
 from typing import Sequence
+import asyncio
 
 from .drive import GDriveEventsManager, GDrive
 from .db import DBDriveFiles, DBDocuments
@@ -20,26 +21,55 @@ async def db_drive_synchronization(event: Request):
     drive_files_manager = DBDriveFiles()
     existing_files = await drive_files_manager.list_files(tuple(files_mapping.keys()))
 
-    # File ids to exclude from re-embedding
-    excluded = []
+    excluded = []  # File ids to exclude from re-embedding
 
-    for fileid_content_tuple in existing_files:
-        if files_mapping[fileid_content_tuple[0]].content == fileid_content_tuple[1]:
-            excluded.append(fileid_content_tuple[0])
+    files_to_create = []
+    files_to_update_from = []
+    existing_files_for_update = []
+    files_to_delete = []
 
-    await drive_files_manager.add_files_from_drive(tuple(files_mapping.values()))
+    for existing_file in existing_files:
+
+        file = files_mapping.pop(existing_file.file_id)
+
+        if file.trashed:
+            files_to_delete.append(file)
+        else:
+            files_to_update_from.append(file)
+            existing_files_for_update.append(existing_file)
+            if file.content == existing_file.content:
+                excluded.append(file.id)
+
+    files_to_create = list(files_mapping.values())
+
+    await asyncio.gather(
+
+        asyncio.create_task(drive_files_manager.create_files(
+            files_to_create
+        )),
+
+        asyncio.create_task(drive_files_manager.update_files(
+            zip(files_to_update_from, existing_files_for_update)
+        )),
+
+        asyncio.create_task(drive_files_manager.delete_files(
+            files_to_delete
+        )),
+    )
+
     await embed_into_chunked_documents(files_mapping.values(), excluded)
 
 
-async def embed_into_chunked_documents(files: Sequence[I.File], excluded: Sequence[str]):
+async def embed_into_chunked_documents(files_to_embed: Sequence[I.File], files_to_delete: Sequence[I.File], excluded: Sequence[str]):
 
     embedder = Embedder(512, 32, 'OverlapOptimizer')
     documents_manager = DBDocuments()
 
-    for file in files:
-        if file.trashed:
-            await documents_manager.delete_documents(file.id)
+    await documents_manager.delete_documents(files_to_delete)
 
-        elif file.id not in excluded:
+    for file in files_to_embed:
+
+        if file.id not in excluded:
+
             text_cunks, embedding_data = await embedder.text_to_embeddings(file.content)
             await documents_manager.recreate_documents(file.id, text_cunks, embedding_data)

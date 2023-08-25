@@ -260,7 +260,7 @@ class DBDriveFiles:
 
     #         await db_session.add(file)
 
-    async def add_files_from_drive(self, files: Sequence[I.File]):
+    async def create_files(self, files: Sequence[I.File]):
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
             print("THIS IS IT:\n",  files)
@@ -275,21 +275,13 @@ class DBDriveFiles:
                 metadata = EM.DocumentMetadata(
                     name=file.name,
                     description=file.description,
-                    drive_file_fk=file.id,
                 )
 
                 db_file.metadata_ = metadata
 
-                if file.trashed:
-                    self.__trash_file(db_session, db_file)
-                else:
-                    await db_session.merge(metadata)
-                    await db_session.merge(db_file)
+                await db_session.merge(db_file)
 
-                await db_session.commit()
-
-    async def __trash_file(self, db_session: AsyncSession, file: EM.DriveFile):
-        db_session.delete(file)
+            await db_session.commit()
 
     async def get_file(self, file_id: str) -> EM.DriveFile:
         async with get_sessionmaker().begin() as db_session:
@@ -303,22 +295,36 @@ class DBDriveFiles:
             db_session.expunge_all()
             return file
 
-    async def delete_files(self, file_ids: Sequence[str]) -> None:
+    async def update_files(self, files: Sequence[tuple[I.File, EM.DriveFile]]) -> None:
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
+            for new_file, old_file in files:
+                old_file.content = new_file.content
+                old_file.metadata_.name = new_file.name
+                old_file.metadata_.description = new_file.description
+
+                await db_session.merge(old_file)
+
+            await db_session.commit()
+
+    async def delete_files(self, files: list[I.File]) -> None:
+        async with get_sessionmaker().begin() as db_session:
+            db_session: AsyncSession
+            file_ids = [file.id for file in files]
+
             await db_session.execute(
                 delete(EM.DriveFile)
                 .where(EM.DriveFile.file_id.in_(file_ids))
             )
 
-    async def list_files(self, file_ids: Sequence[str]):
+    async def list_files(self, file_ids: Sequence[str]) -> list[EM.DriveFile]:
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
             res = await db_session.execute(
-                select(EM.DriveFile.file_id, EM.DriveFile.content)
+                select(EM.DriveFile)
                 .where(EM.DriveFile.file_id.in_(file_ids))
             )
-            files = res.all()
+            files = res.scalars().all()
 
             db_session.expunge_all()
             return files
@@ -344,12 +350,14 @@ class DBDocuments:
 
             await db_session.commit()
 
-    async def delete_documents(self, drive_file_id: Sequence[str]) -> None:
+    async def delete_documents(self, drive_files: Sequence[I.File]) -> None:
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
+            file_ids = [file.id for file in drive_files]
+
             await db_session.execute(
                 delete(EM.Document)
-                .where(EM.Document.drive_file_fk == drive_file_id)
+                .where(EM.Document.drive_file_fk.in_(file_ids))
             )
 
     # async def list_files(self, file_ids: Sequence[str]):
