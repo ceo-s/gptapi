@@ -263,6 +263,7 @@ class DBDriveFiles:
     async def add_files_from_drive(self, files: Sequence[I.File]):
         async with get_sessionmaker().begin() as db_session:
             db_session: AsyncSession
+            print("THIS IS IT:\n",  files)
             for file in files:
 
                 db_file = EM.DriveFile(
@@ -274,6 +275,7 @@ class DBDriveFiles:
                 metadata = EM.DocumentMetadata(
                     name=file.name,
                     description=file.description,
+                    drive_file_fk=file.id,
                 )
 
                 db_file.metadata_ = metadata
@@ -281,7 +283,8 @@ class DBDriveFiles:
                 if file.trashed:
                     self.__trash_file(db_session, db_file)
                 else:
-                    db_session.merge(file)
+                    await db_session.merge(metadata)
+                    await db_session.merge(db_file)
 
                 await db_session.commit()
 

@@ -11,8 +11,8 @@ from ..mixins import mixins as M
 OPENAI_EMBEDDING_SIZE = 1536
 
 
-class Collection(M.AutoIncrement, M.ClassNamed, BASE):
-    dir_id: Mapped[str] = mapped_column()
+class Collection(M.ClassNamed, BASE):
+    dir_id: Mapped[str] = mapped_column(primary_key=True)
 
     drive_files: Mapped[list["DriveFile"]] = relationship(
         back_populates="collection",
@@ -51,8 +51,8 @@ class DriveFile(BASE):
         lazy="selectin",
     )
 
-    collection_fk: Mapped[int] = mapped_column(
-        ForeignKey("collection.id")
+    collection_fk: Mapped[str] = mapped_column(
+        ForeignKey("collection.dir_id")
     )
     collection: Mapped["Collection"] = relationship(
         back_populates="drive_files",
@@ -65,11 +65,11 @@ class Document(M.AutoIncrement, M.ClassNamed, BASE):
     text: Mapped[str] = mapped_column()
     embedding = mapped_column(Vector(OPENAI_EMBEDDING_SIZE))
 
-    drive_file_fk: Mapped[int] = mapped_column(
+    drive_file_fk: Mapped[str] = mapped_column(
         ForeignKey("drive_file.file_id", ondelete="CASCADE")
     )
-    drive_file: Mapped["Document"] = relationship(
-        back_populates="metadata_",
+    drive_file: Mapped["DriveFile"] = relationship(
+        back_populates="documents",
         cascade="all, delete",
         uselist=False,
         lazy="joined",
@@ -84,7 +84,8 @@ class DocumentMetadata(M.AutoIncrement, BASE):
     token_cost: Mapped[int] = mapped_column(nullable=True)
 
     drive_file_fk: Mapped[str] = mapped_column(
-        ForeignKey("drive_file.file_id", ondelete="CASCADE")
+        ForeignKey("drive_file.file_id", ondelete="CASCADE"),
+        unique=True,
     )
     drive_file: Mapped[DriveFile] = relationship(
         back_populates="metadata_",

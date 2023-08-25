@@ -10,25 +10,25 @@ import db.interfaces as I
 async def db_drive_synchronization(event: Request):
 
     manager = GDriveEventsManager()
-    files_maping = await manager.HANDLER.handle_event(headers=event.headers)
+    files_mapping = await manager.HANDLER.handle_event(headers=event.headers)
 
-    if files_maping is None:
+    if not files_mapping:
         print("FILES IS NONE =(")
         return
-    print(files_maping)
+    print(files_mapping)
 
     drive_files_manager = DBDriveFiles()
-    existing_files = await drive_files_manager.list_files(tuple(files_maping.keys()))
+    existing_files = await drive_files_manager.list_files(tuple(files_mapping.keys()))
 
     # File ids to exclude from re-embedding
     excluded = []
 
     for fileid_content_tuple in existing_files:
-        if files_maping[fileid_content_tuple[0]].content == fileid_content_tuple[1]:
+        if files_mapping[fileid_content_tuple[0]].content == fileid_content_tuple[1]:
             excluded.append(fileid_content_tuple[0])
 
-    await drive_files_manager.add_files_from_drive(tuple(files_maping.values()))
-    await embed_into_chunked_documents()
+    await drive_files_manager.add_files_from_drive(tuple(files_mapping.values()))
+    await embed_into_chunked_documents(files_mapping.values(), excluded)
 
 
 async def embed_into_chunked_documents(files: Sequence[I.File], excluded: Sequence[str]):

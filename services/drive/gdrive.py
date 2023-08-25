@@ -310,7 +310,9 @@ class GDriveContentPreprocessor:
         return " ".join([paragraph.text for paragraph in document.paragraphs])
 
     def process_txt(self, content: BytesIO):
-        "DOC CONTENT", content.read()
+        res = content.read().decode()
+        print(f"\033[93m{type(res)}\033[0m")
+        return res
 
 
 class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
@@ -339,28 +341,29 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
         drive = self.__DRIVE()
         session = AuthorizedSession(drive._creds)
         changes: list[dict] = []
-        events_count = self.__events_count
-
-        # Resetting for nex events
-        self.__events_count = 0
-        self.__resource_uris.clear()
+        
 
         fields = f'nextPageToken,newStartPageToken,changes(fileId,kind,removed,file(name,mimeType,parents,id,description,trashed,webContentLink,fileExtension))'
         for uri in self.__resource_uris:
             resp = session.get(f"{uri}&fields={fields}")
+            print(resp)
             changes += resp.json()["changes"]
 
-        changes = changes[-events_count:]
+        changes = changes[-self.__events_count:]
 
-        # print(f"{changes=}")
+        # Resetting for next events    
+        self.__events_count = 0
+        self.__resource_uris.clear()
+
+
+        print(f"2{changes=}")
         files_mapping = self._get_changed_files(changes)
         for file in files_mapping.values():
             self.get_file_content(drive, file)
-
+        
         return files_mapping
 
     async def __handle_event(self):
-        print("in __handle_event")
         await asyncio.sleep(5)
         return self.__process_event()
 
@@ -377,12 +380,10 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
         self.__task = asyncio.create_task(self.__handle_event())
 
         self._add_resource_uri(headers[Headers.Resource_URI.value])
-        print("Awaiting task")
         task_res = await self.__task
-        print("TASK RES", task_res)
         return task_res
 
-    async def _add_resource_uri(self, uri: str):
+    def _add_resource_uri(self, uri: str):
         if uri not in self.__resource_uris:
             self.__resource_uris.append(uri)
 
