@@ -355,10 +355,16 @@ class DBDocuments:
                 delete(EM.Document)
                 .where(EM.Document.drive_file_fk.in_(file_ids))
             )
+
     async def query_documents(self, query_embedding: list[float], n_documents: int = 3):
-         async with get_sessionmaker().begin() as db_session:
-             db_session: AsyncSession
-             db_session.scalars(select(EM.Document.l2_distance(query_embedding)).limit(n_documents))
+        async with get_sessionmaker().begin() as db_session:
+            db_session: AsyncSession
+            res = await db_session.scalars(select(EM.Document.embedding.l2_distance(
+                query_embedding)).limit(n_documents))
+
+            documents = res.all()
+            db_session.expunge_all()
+            return documents
 
     # async def list_files(self, file_ids: Sequence[str]):
     #     async with get_sessionmaker().begin() as db_session:

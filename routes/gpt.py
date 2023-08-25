@@ -3,7 +3,7 @@ from db import interfaces as I
 
 from services.llm import generate_prompt, history_add_message, chat_completion
 from services.db import DBUser
-from services.drive import GDrive
+from services.llm_db import get_context
 
 router = APIRouter()
 
@@ -11,7 +11,7 @@ router = APIRouter()
 @router.post("/chat-compeltion/")
 async def get_chat_completion(q_user: I.UserQuery):
     user = await DBUser.from_id(q_user.id)
-    # context = get_context(q_user.id, q_user.query)
+    get_context(q_user.query)
     context = ""
     prompt = generate_prompt(user.settings.prompt, context)
     history = user.settings.history

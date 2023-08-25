@@ -136,8 +136,13 @@ class Embedder(IEmbedder):
         print("AFTER EMBEDDING")
 
         return texts, embedding["data"]
-        # return embedding["data"][0]["embedding"]
         # return [[6.] * 1536] * len(texts)
+
+    async def embed_query(self, query: str) -> list[float]:
+        embedding = await openai.Embedding.acreate(
+            input=[query], model="text-embedding-ada-002")
+
+        return embedding["data"][0]["embedding"]
 
 
 def generate_prompt(prompt: str, context: str) -> str:
