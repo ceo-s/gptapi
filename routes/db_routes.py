@@ -75,3 +75,9 @@ async def update_documents(user_id: int, username: str, document_text: str):
     # await collection.delete_document("3")
     await collection.commit()
     return {"succ": "ass"}
+
+
+@router.get("/get-user-folder/")
+async def get_user_folder(user_id: int):
+    folder_id = await UserCollection.get_id(user_id)
+    return {"folder_id": folder_id}

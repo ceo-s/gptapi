@@ -367,8 +367,7 @@ class DBDocuments:
             res = await db_session.scalars(
                 select(EM.Document.text).where(EM.Document.drive_file_fk.in_(file_ids)).order_by(
                     EM.Document.embedding.l2_distance(query_embedding)).limit(n_documents)
-            ) 
-            
+            )
 
             documents = res.all()
             db_session.expunge_all()
@@ -424,11 +423,12 @@ class UserCollection:
         self.__collection: EM.Collection
         self.files: DBDriveFiles
 
-    def get_document(self):
-        ...
-
-    def list_documents(self):
-        ...
-
-    def list_drive_files(self):
-        ...
+    @staticmethod
+    async def get_id(user_id: int):
+        async with get_sessionmaker().begin() as db_session:
+            db_session: AsyncSession
+            res = await db_session.scalar(
+                select(EM.Collection.dir_id)
+                .where(EM.Collection.user_fk == user_id)
+            )
+            return res
