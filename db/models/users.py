@@ -12,7 +12,7 @@ from db.instance import BASE
 class User(M.ClassNamed, BASE):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    username: Mapped[str] = mapped_column(String(36))
+    username: Mapped[str] = mapped_column(String(36), nullable=True)
     first_name: Mapped[str] = mapped_column(String(32))
 
     settings: Mapped["UserSettings"] = relationship(
