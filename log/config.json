@@ -10,7 +10,7 @@
         },
         "emoji": {
             "()": "log.formatters.EmojiFormatter",
-            "format": "[{levelname}]    {message}",
+            "format": "  {message}",
             "style": "{"
         }
     },
@@ -24,10 +24,6 @@
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "colored",
-            "level": "DEBUG"
-        },
-        "file": {
-            "class": "logging.FileHandler",
             "level": "DEBUG"
         }
     },

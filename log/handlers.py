@@ -11,9 +11,9 @@ BOT_TOKEN = os.getenv("NOTIFICATION_BOT_TOKEN")
 
 
 async def telegram_send_message(message: str):
-    async with ClientSession() as session:
+    async with ClientSession("https://api.telegram.org") as session:
         await session.get(url=f"/bot{BOT_TOKEN}/sendMessage", params={
-            "chat_id": id, "text": message, "parse_mode": "HTML"})
+            "chat_id": 638322484, "text": message, "parse_mode": "HTML"})
 
 
 class TelegramHandler(Handler):
