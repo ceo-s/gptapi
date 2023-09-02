@@ -33,6 +33,9 @@ class DBUser(IUser):
     def __getattr__(self, attr):
         return getattr(self.__user, attr)
 
+    def __str__(self):
+        return f"User<id={self.__user_id} & first_name={self.__user.first_name}>"
+
     @classmethod
     async def from_id(cls, __user_id: int):
         self = cls()
@@ -44,13 +47,9 @@ class DBUser(IUser):
         res = self.__user.__dict__
 
         res["settings"] = res["settings"].__dict__
-        #res['collection'] = res['collection'].__dict__
         res.pop("collection")
-        print(res["settings"])
-        #print("COLLECTION => ",res["collection"])
         res.pop("_sa_instance_state")
         res["settings"].pop("_sa_instance_state")
-        #res['collection'].pop("_sa_instance_state")
 
         return res
 

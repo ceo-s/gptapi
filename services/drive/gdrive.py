@@ -10,6 +10,7 @@ from db import interfaces as I
 from io import BytesIO
 from docx import Document
 from openpyxl import load_workbook
+from log import logger
 
 # from google.auth.transport._aiohttp_requests import Request
 from google.auth.transport.requests import Request, AuthorizedSession
@@ -113,7 +114,7 @@ class GDrive(GDriveAuth):
             self._service.permissions().create(
                 fileId=dir_id, body=permission, fields='id').execute()
         except HttpError as error:
-            print(f'An error occurred: {error}')
+            logger.error(f"Error requesting drive api. Msg {error}")
 
     def listdir(self, dir_id: str):
         try:
@@ -123,7 +124,7 @@ class GDrive(GDriveAuth):
             print(files)
 
         except HttpError as error:
-            print(f'An error occurred: {error}')
+            logger.error(f"Error requesting drive api. Msg {error}")
 
         return files
 
@@ -141,7 +142,7 @@ class GDrive(GDriveAuth):
                                                 supportsAllDrives=True).execute()
 
         except HttpError as error:
-            print(f'An error occurred: {error}')
+            logger.error(f"Error requesting drive api. Msg {error}")
 
         return file.get("id")
 
@@ -168,7 +169,7 @@ class GDrive(GDriveAuth):
                 status, done = downloader.next_chunk()
                 print(f"{status=}, {done=}")
         except HttpError as error:
-            print(f'An error occurred: {error}')
+            logger.error(f"Error requesting drive api. Msg {error}")
 
         file_content.seek(0)
         return file_content
@@ -182,7 +183,7 @@ class GDrive(GDriveAuth):
                 q=f"'{self.BASEDIR_ID}' in parents and name = '{dirname}'").execute()
             print("THIS IS FOLDER", folder)
         except HttpError as error:
-            print(f'An error occurred: {error}')
+            logger.error(f"Error requesting drive api. Msg {error}")
 
         file = folder.get("files")[0]
 
@@ -311,7 +312,6 @@ class GDriveContentPreprocessor:
 
     def process_txt(self, content: BytesIO):
         res = content.read().decode()
-        print(f"\033[93m{type(res)}\033[0m")
         return res
 
 
@@ -321,7 +321,6 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
     __DRIVE = GDrive
 
     def __new__(cls) -> Self:
-        print("I am in new method and this is __SELF=", id(cls.__SELF))
         if cls.__SELF is None:
             self = super().__new__(cls)
             self.__task = None
@@ -337,30 +336,27 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
         self.__events_count: int
 
     def __process_event(self) -> dict[str, I.File]:
-        print("\033[93mStart to proceed\033[0m")
+        logger.info(f"Proceeding sync event...")
         drive = self.__DRIVE()
         session = AuthorizedSession(drive._creds)
         changes: list[dict] = []
-        
 
         fields = f'nextPageToken,newStartPageToken,changes(fileId,kind,removed,file(name,mimeType,parents,id,description,trashed,webContentLink,fileExtension))'
         for uri in self.__resource_uris:
             resp = session.get(f"{uri}&fields={fields}")
-            print(resp)
+
             changes += resp.json()["changes"]
 
         changes = changes[-self.__events_count:]
 
-        # Resetting for next events    
+        # Resetting for next events
         self.__events_count = 0
         self.__resource_uris.clear()
 
-
-        print(f"2{changes=}")
         files_mapping = self._get_changed_files(changes)
         for file in files_mapping.values():
             self.get_file_content(drive, file)
-        
+
         return files_mapping
 
     async def __handle_event(self):
@@ -371,9 +367,10 @@ class GDriveEventsHandler(GDriveContentPreprocessor, GDriveEventProcesser):
 
         if headers[Headers.Resource_State.value] == ResourceStates.SYNC.value:
             return
-        print("Resource uris", self.__resource_uris)
+
+        logger.debug(f"Resource uris = {self.__resource_uris}")
         if self.__task is not None:
-            print("\033[93mCanceling task\033[0m")
+            logger.debug("CANCELING TASK")
             self.__task.cancel()
 
         self.__events_count += 1

@@ -31,7 +31,7 @@ async def get_history(user_id: int):
     for item in user.settings.history:
         history += item_template.format(role=item.get("name", item["role"]).capitalize(),
                                         content=item["content"])
-    print(get_page('bot_webapps', 'history', user_id=user_id, history=history).body)
+
     return get_page('bot_webapps', 'history', user_id=user_id, history=history)
 
 
@@ -45,7 +45,6 @@ async def get_change_history_webapp(user_id: int):
 
 @router.post("/post-change-history-limit/")
 async def post_change_history(user_data: I.OUser):
-    print(user_data)
     user = await DBUser.from_id(user_data.id)
     async with user.update() as user_to_update:
         user_to_update.settings.history_size = user_data.settings.history_size

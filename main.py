@@ -6,17 +6,18 @@ from contextlib import asynccontextmanager
 from services.drive import GDriveEventsManager
 from static import register_staticfiles
 from routes import register_routers
+from log import logger
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("this is lifespan start")
+    logger.info("this is lifespan start")
     drive_manager = GDriveEventsManager()
     await drive_manager.POLLER.start_polling()
 
     yield
     drive_manager.POLLER.delete_channel()
-    print("this is lifespan end")
+    logger.info("this is lifespan end")
 
 
 app = FastAPI(lifespan=lifespan)

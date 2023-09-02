@@ -1,0 +1,41 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+
+    "formatters": {
+        "colored": {
+            "()": "log.formatters.ColoredFormatter",
+            "format": "[{levelname}]    {message}",
+            "style": "{"
+        },
+        "emoji": {
+            "()": "log.formatters.EmojiFormatter",
+            "format": "[{levelname}]    {message}",
+            "style": "{"
+        }
+    },
+
+    "handlers": {
+        "telegram": {
+        "()": "log.handlers.TelegramHandler",
+        "formatter": "emoji",
+        "level": "INFO"
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "colored",
+            "level": "DEBUG"
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG"
+        }
+    },
+
+    "loggers": {
+        "base_logger": {
+            "level": "DEBUG",
+            "handlers": ["telegram", "console"]
+        }
+    }
+}

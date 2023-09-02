@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from typing import Literal, Type
 from .._interfaces import IOptimizer, IEmbedder
 from math import ceil
-
+from log import logger
 
 BASE_PROMPT_TEMPLATE = """
 Дополнительные сведения по вопросу (если они есть) находятся ниже, в тэге "справочный материал":
@@ -123,7 +123,7 @@ class Embedder(IEmbedder):
         self._optimizer = OPTIMIZERS_MAPPING[optimizer]
 
     async def text_to_embeddings(self, text: str) -> tuple[list[dict], list[str]]:
-        print("CREATING EMBEDDING")
+        logger.debug("CREATING EMBEDDINGS")
         preprocessor = TextPreprocessor(text)
         texts = preprocessor.split_by_n_chars(
             self.chunk_size, self.overlap, self._optimizer)
@@ -133,7 +133,7 @@ class Embedder(IEmbedder):
 
         embedding = await openai.Embedding.acreate(
             input=texts, model="text-embedding-ada-002")
-        print("AFTER EMBEDDING")
+        logger.debug("END CREATING EMBEDDINGS")
 
         return texts, embedding["data"]
         # return [[6.] * 1536] * len(texts)

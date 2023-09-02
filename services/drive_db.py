@@ -14,9 +14,7 @@ async def db_drive_synchronization(event: Request):
     files_mapping = await manager.HANDLER.handle_event(headers=event.headers)
 
     if not files_mapping:
-        print("FILES IS NONE =(")
         return
-    print(files_mapping)
 
     drive_files_manager = DBDriveFiles()
     existing_files = await drive_files_manager.list_files(tuple(files_mapping.keys()))
